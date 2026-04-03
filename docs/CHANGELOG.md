@@ -6,6 +6,12 @@
 - Thoroughly explain about your features and changes committed.
 - Always add changes on the top of previous changes, do not break this.
 
+## Added requirements.txt
+
+- Timestamp: 2026-04-03, 09:10pm
+- Author: Hitesh
+- Description: Added requirements.txt inside root directory.
+
 ## Added HF fallback for local model load
 
 - Timestamp: 2026-04-03, 08:45pm
