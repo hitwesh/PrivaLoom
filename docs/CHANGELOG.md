@@ -6,6 +6,12 @@
 - Thoroughly explain about your features and changes committed.
 - Always add changes on the top of previous changes, do not break this.
 
+## Added client CLI and tuned sampling
+
+- Timestamp: 2026-04-03, 09:52pm
+- Author: Hitesh
+- Description: Added client/client.py for calling the /chat API and adjusted generation sampling parameters for more natural outputs.
+
 ## Fixed server package discovery
 
 - Timestamp: 2026-04-03, 09:40pm

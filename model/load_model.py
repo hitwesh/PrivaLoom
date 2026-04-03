@@ -28,6 +28,8 @@ def generate_response(prompt: str) -> str:
         **inputs,
         max_length=100,
         do_sample=True,
-        temperature=0.7,
+        temperature=0.9,
+        top_k=50,
+        top_p=0.95,
     )
     return tokenizer.decode(outputs[0], skip_special_tokens=True)
