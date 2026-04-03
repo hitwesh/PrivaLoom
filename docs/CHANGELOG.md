@@ -6,6 +6,12 @@
 - Thoroughly explain about your features and changes committed.
 - Always add changes on the top of previous changes, do not break this.
 
+## Fixed client import path
+
+- Timestamp: 2026-04-03, 10:25pm
+- Author: Hitesh
+- Description: Added repo-root path injection so client can import model when run as a script.
+
 ## Switched client to model-based updates
 
 - Timestamp: 2026-04-03, 10:20pm
