@@ -6,6 +6,18 @@
 - Thoroughly explain about your features and changes committed.
 - Always add changes on the top of previous changes, do not break this.
 
+## Fixed server package discovery
+
+- Timestamp: 2026-04-03, 09:40pm
+- Author: Hitesh
+- Description: Added server/__init__.py so uvicorn can import server.api.
+
+## Added FastAPI chat API
+
+- Timestamp: 2026-04-03, 09:30pm
+- Author: Hitesh
+- Description: Added server/api.py with root health route and /chat endpoint that returns model responses.
+
 ## Added requirements.txt
 
 - Timestamp: 2026-04-03, 09:10pm
