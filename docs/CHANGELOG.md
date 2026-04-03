@@ -6,6 +6,12 @@
 - Thoroughly explain about your features and changes committed.
 - Always add changes on the top of previous changes, do not break this.
 
+## Added update flow simulation
+
+- Timestamp: 2026-04-03, 10:00pm
+- Author: Hitesh
+- Description: Added client-side dummy update posts and a /send-update endpoint to receive simulated weights.
+
 ## Added client CLI and tuned sampling
 
 - Timestamp: 2026-04-03, 09:52pm
