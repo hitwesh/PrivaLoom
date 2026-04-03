@@ -1,0 +1,68 @@
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE / Editor
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.swp
+*.tmp
+
+# Build output
+bin/
+obj/
+dist/
+build/
+out/
+
+# Dependency directories
+node_modules/
+vendor/
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# Test / coverage
+coverage/
+.nyc_output/
+*.lcov
+
+# Package managers
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Hugging Face local model artifacts
+model/*
+!model/*.py
+!model/__init__.py
+
+# .NET
+*.rsuser
+
+# Misc
+*.pid
+*.seed
+*.stackdump
