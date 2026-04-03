@@ -6,6 +6,12 @@
 - Thoroughly explain about your features and changes committed.
 - Always add changes on the top of previous changes, do not break this.
 
+## Switched updates to gradients
+
+- Timestamp: 2026-04-03, 10:35pm
+- Author: Hitesh
+- Description: Client now computes and sends small gradient slices from a local forward/backward pass instead of static weights.
+
 ## Fixed client import path
 
 - Timestamp: 2026-04-03, 10:25pm
