@@ -10,7 +10,7 @@ class ChatRequest(BaseModel):
 
 
 class UpdateRequest(BaseModel):
-    weights: list
+    weights: list[list[float]]
 
 @app.get("/")
 def home() -> dict[str, str]:

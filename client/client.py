@@ -1,8 +1,16 @@
-import random
 import requests
+
+from model.load_model import model
 
 CHAT_URL = "http://127.0.0.1:8000/chat"
 UPDATE_URL = "http://127.0.0.1:8000/send-update"
+
+
+def get_model_update() -> list[list[float]]:
+    updates: list[list[float]] = []
+    for param in model.parameters():
+        updates.append(param.data.view(-1)[:2].tolist())
+    return updates[:5]
 
 
 def main() -> None:
@@ -12,8 +20,8 @@ def main() -> None:
         result = response.json()
         print("Bot:", result.get("response", ""))
 
-        fake_update = {"weights": [random.random() for _ in range(5)]}
-        update_response = requests.post(UPDATE_URL, json=fake_update, timeout=30)
+        real_update = {"weights": get_model_update()}
+        update_response = requests.post(UPDATE_URL, json=real_update, timeout=30)
         print("Update status:", update_response.json())
 
 
