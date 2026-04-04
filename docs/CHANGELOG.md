@@ -6,6 +6,18 @@
 - Thoroughly explain about your features and changes committed.
 - Always add changes on the top of previous changes, do not break this.
 
+## Fixed one-time dataset training flag
+
+- Timestamp: 2026-04-04, 07:23pm
+- Author: Hitesh
+- Description: Moved the dataset training flag outside the loop so dataset training runs only once.
+
+## Added one-time dataset training flow
+
+- Timestamp: 2026-04-04, 05:23pm
+- Author: Hitesh
+- Description: Added data.txt placeholder and client-side one-time dataset training with aggregated update slices before incremental updates.
+
 ## Applied selective last-layer updates
 
 - Timestamp: 2026-04-04, 01:31pm
