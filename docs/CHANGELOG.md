@@ -6,6 +6,12 @@
 - Thoroughly explain about your features and changes committed.
 - Always add changes on the top of previous changes, do not break this.
 
+## Applied selective last-layer updates
+
+- Timestamp: 2026-04-04, 01:31pm
+- Author: Hitesh
+- Description: Aggregation now applies averaged update slices only to the last model layers instead of the entire parameter set.
+
 ## Applied averaged gradient aggregation
 
 - Timestamp: 2026-04-04, 01:07pm

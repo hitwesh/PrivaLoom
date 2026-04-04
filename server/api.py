@@ -40,7 +40,7 @@ def receive_update(update: UpdateRequest) -> dict[str, str]:
 
 
 def apply_updates(updates: list[list[list[float]]]) -> None:
-    print("Applying REAL aggregated updates...")
+    print("Applying selective updates (last layers only)...")
 
     num_updates = len(updates)
     aggregated: list[list[float]] = []
@@ -54,13 +54,14 @@ def apply_updates(updates: list[list[list[float]]]) -> None:
         aggregated.append(slice_avg)
 
     with torch.no_grad():
-        param_index = 0
-        for param in model.parameters():
-            if param.requires_grad:
-                if param_index < len(aggregated):
-                    update_tensor = torch.tensor(aggregated[param_index])
-                    flat_param = param.view(-1)
-                    flat_param[: len(update_tensor)] += update_tensor
-                    param_index += 1
+        params = list(model.parameters())
+        num_layers_to_update = 5
+        last_layers = params[-num_layers_to_update:]
 
-    print("Model updated with REAL aggregation!")
+        for index, param in enumerate(last_layers):
+            if index < len(aggregated):
+                update_tensor = torch.tensor(aggregated[index])
+                flat_param = param.view(-1)
+                flat_param[: len(update_tensor)] += update_tensor
+
+    print("Selective update applied to last layers!")
