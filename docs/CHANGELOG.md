@@ -6,6 +6,12 @@
 - Thoroughly explain about your features and changes committed.
 - Always add changes on the top of previous changes, do not break this.
 
+## Applied averaged gradient aggregation
+
+- Timestamp: 2026-04-04, 01:07pm
+- Author: Hitesh
+- Description: Replaced simulated noise updates with averaged gradient slice aggregation applied to model parameters.
+
 ## Added server-side update aggregation buffer
 
 - Timestamp: 2026-04-04, 12:50pm
