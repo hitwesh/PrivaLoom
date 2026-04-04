@@ -1,6 +1,6 @@
 # PrivaLoom Architecture
 
-Last updated: 2026-04-04
+Last updated: 2026-04-05
 
 ## 1. Purpose of this document
 
@@ -105,10 +105,19 @@ Current flow per session:
 
 Local update extraction details:
 - run forward/backward with language modeling loss
+- apply client-side privacy layer (basic differential privacy):
+  - clip gradients with `torch.nn.utils.clip_grad_norm_`
+  - add Gaussian noise with `torch.randn_like`
+  - then slice and transmit compact updates
 - per parameter gradient:
   - flatten tensor
   - keep only first 2 values
 - keep only first 5 parameter gradient slices total
+
+DP configuration (client environment variables):
+- `DP_ENABLED` (default: `true`)
+- `DP_MAX_GRAD_NORM` (default: `1.0`)
+- `DP_NOISE_STDDEV` (default: `0.001`)
 
 ### Standalone CLI (`main.py`)
 

@@ -2,6 +2,7 @@ import os
 import sys
 
 import requests
+import torch
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if ROOT_DIR not in sys.path:
@@ -12,6 +13,28 @@ from model.load_model import model, tokenizer
 CHAT_URL = "http://127.0.0.1:8000/chat"
 UPDATE_URL = "http://127.0.0.1:8000/send-update"
 DATA_PATH = os.path.join(ROOT_DIR, "data.txt")
+
+
+def _get_env_bool(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _get_env_float(name: str, default: float) -> float:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    try:
+        return float(value)
+    except ValueError:
+        return default
+
+
+DP_ENABLED = _get_env_bool("DP_ENABLED", True)
+DP_MAX_GRAD_NORM = _get_env_float("DP_MAX_GRAD_NORM", 1.0)
+DP_NOISE_STDDEV = _get_env_float("DP_NOISE_STDDEV", 0.001)
 
 
 def load_dataset() -> list[str]:
@@ -38,11 +61,19 @@ def aggregate_updates(updates: list[list[list[float]]]) -> list[list[float]]:
 
 
 def train_and_get_update(text: str) -> list[list[float]]:
+    model.train()
     model.zero_grad()
     inputs = tokenizer(text, return_tensors="pt")
     outputs = model(**inputs, labels=inputs["input_ids"])
     loss = outputs.loss
     loss.backward()
+
+    if DP_ENABLED:
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=DP_MAX_GRAD_NORM)
+        if DP_NOISE_STDDEV > 0:
+            for param in model.parameters():
+                if param.grad is not None:
+                    param.grad.add_(torch.randn_like(param.grad) * DP_NOISE_STDDEV)
 
     gradients: list[list[float]] = []
     for param in model.parameters():

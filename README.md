@@ -30,6 +30,7 @@ Implemented now:
   - chats through the server
   - computes local gradient slices
   - sends compact update payloads
+- client-side gradient clipping + Gaussian noise (basic differential privacy)
 - server-side in-memory update buffering and averaging
 - selective update application to last model parameters
 
@@ -38,11 +39,15 @@ Partially implemented:
 - update mapping/selective update strategy
 
 Not implemented yet:
-- differential privacy noise/clipping
 - update encryption and secure aggregation
 - frontend UI
 - automated tests and CI pipeline
 - production hardening (auth, persistence, observability)
+
+DP configuration (client)
+- `DP_ENABLED` (default: `true`)
+- `DP_MAX_GRAD_NORM` (default: `1.0`)
+- `DP_NOISE_STDDEV` (default: `0.001`)
 
 ## Repository structure
 

@@ -59,9 +59,11 @@
 # Goal: "Smart updates" instead of blind training
 
 # Phase 8: Privacy Layer
-# - Add noise to updates (basic Differential Privacy)
-# - Encrypt updates before sending
-# Goal: No raw or exact info leakage
+# - Clip gradients (bounded sensitivity)
+# - Add Gaussian noise to gradient slices (basic Differential Privacy)
+# - Keep payload compact (send only partial/noised slices)
+# - (Optional / later) Encrypt updates before sending
+# Goal: No raw or exact gradient info leakage
 
 # Phase 9: Frontend (Parallel or After Backend)
 # - Build simple React UI:
