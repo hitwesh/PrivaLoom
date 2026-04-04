@@ -6,6 +6,12 @@
 - Thoroughly explain about your features and changes committed.
 - Always add changes on the top of previous changes, do not break this.
 
+## Added server-side update aggregation buffer
+
+- Timestamp: 2026-04-04, 12:50pm
+- Author: Hitesh
+- Description: Server now buffers incoming updates, applies a simulated aggregation update when a threshold is reached, then clears the buffer.
+
 ## Switched updates to gradients
 
 - Timestamp: 2026-04-03, 10:35pm
