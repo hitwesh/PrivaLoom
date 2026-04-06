@@ -6,6 +6,11 @@
 - Thoroughly explain about your features and changes committed.
 - Always add changes on the top of previous changes, do not break this.
 
+## Added in-workspace admin panel with integrity and retraining controls
+- Timestamp: 2026-04-07, 12:09AM
+- Author: Hitesh
+- Description: Added a professional admin control view inside the user workspace with cross-user update table, integrity trend/volume graphs, model integrity checks, and manual plus auto retraining policy controls.
+
 ## Renamed browser tab title to PrivaLoom
 - Timestamp: 2026-04-06, 11:35pm
 - Author: Hitesh

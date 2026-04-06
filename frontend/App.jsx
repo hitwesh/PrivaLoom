@@ -7,6 +7,7 @@ import PrivacyBadge from "./components/PrivacyBadge";
 import LandingPage from "./components/LandingPage";
 import AccessPortal from "./components/AccessPortal";
 import ArchitecturePage from "./components/ArchitecturePage";
+import AdminPanel from "./components/AdminPanel";
 
 const MAX_LOG_ITEMS = 8;
 
@@ -58,6 +59,7 @@ export default function App() {
     clientWorkspace: "",
   });
   const [activityLog, setActivityLog] = useState([]);
+  const [workspaceView, setWorkspaceView] = useState("chat");
 
   const canOpenWorkspace = Boolean(session.accountName && session.clientWorkspace);
 
@@ -67,6 +69,7 @@ export default function App() {
 
   const handleAccessContinue = ({ accountName, clientWorkspace }) => {
     setSession({ accountName, clientWorkspace });
+    setWorkspaceView("chat");
     setActivityLog([
       createLogEntry(`Workspace opened for ${accountName} in ${clientWorkspace}.`, "Session"),
       createLogEntry("Awaiting first document upload for local training updates.", "Data"),
@@ -98,6 +101,14 @@ export default function App() {
     const label = files.length === 1 ? files[0].fileName : `${files.length} files`;
     appendActivity(`Update package sent with ${label}.`, "Dispatch");
     appendActivity("Dataset payload forwarded for processing.", "Processing");
+  };
+
+  const handleAdminActivity = (message, tag = "Admin") => {
+    if (!message) {
+      return;
+    }
+
+    appendActivity(message, tag);
   };
 
   const renderStage = () => {
@@ -162,11 +173,39 @@ export default function App() {
         </aside>
 
         <main className="workspace-main">
-          <ChatPanel
-            accountName={session.accountName}
-            clientWorkspace={session.clientWorkspace}
-            onPromptSubmitted={handlePromptSubmitted}
-          />
+          <div className="workspace-main-shell">
+            <section className="workspace-view-switcher card-surface" aria-label="Workspace view">
+              <button
+                className={`workspace-view-btn ${workspaceView === "chat" ? "is-active" : ""}`}
+                type="button"
+                onClick={() => setWorkspaceView("chat")}
+              >
+                Conversation
+              </button>
+              <button
+                className={`workspace-view-btn ${workspaceView === "admin" ? "is-active" : ""}`}
+                type="button"
+                onClick={() => setWorkspaceView("admin")}
+              >
+                Admin Control
+              </button>
+            </section>
+
+            {workspaceView === "chat" ? (
+              <ChatPanel
+                accountName={session.accountName}
+                clientWorkspace={session.clientWorkspace}
+                onPromptSubmitted={handlePromptSubmitted}
+              />
+            ) : (
+              <AdminPanel
+                accountName={session.accountName}
+                clientWorkspace={session.clientWorkspace}
+                updates={activityLog}
+                onAdminActivity={handleAdminActivity}
+              />
+            )}
+          </div>
         </main>
       </div>
     );
