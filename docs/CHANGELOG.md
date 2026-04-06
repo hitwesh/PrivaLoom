@@ -6,6 +6,11 @@
 - Thoroughly explain about your features and changes committed.
 - Always add changes on the top of previous changes, do not break this.
 
+## Added premium landing flow with dummy multi-client access gateway
+- Timestamp: 2026-04-06, 08:19pm
+- Author: Hitesh
+- Description: Added a high-end monochrome landing page and an intermediate dummy account/client access page (account name + password + client workspace selection) that routes into the existing training dashboard, enabling a realistic multi-client entry flow without auth/RBAC/database dependencies.
+
 ## Redesigned frontend with premium monochrome chat workspace
 - Timestamp: 2026-04-06, 08:00pm
 - Author: Hitesh

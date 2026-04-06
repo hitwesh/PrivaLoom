@@ -1,15 +1,13 @@
 import { useState } from "react";
 
-const defaultMessages = [
-  {
-    role: "assistant",
-    text: "Workspace is live. Share a prompt to test your local model while keeping all context private.",
-  },
-];
-
-export default function ChatPanel() {
+export default function ChatPanel({ accountName, clientWorkspace }) {
   const [message, setMessage] = useState("");
-  const [history, setHistory] = useState(defaultMessages);
+  const [history, setHistory] = useState([
+    {
+      role: "assistant",
+      text: `Workspace is live for ${accountName} in ${clientWorkspace}. Share a prompt to test your local model while keeping all context private.`,
+    },
+  ]);
 
   const sendMessage = () => {
     const trimmed = message.trim();
@@ -39,7 +37,7 @@ export default function ChatPanel() {
     <section className="chat-shell card-surface">
       <header className="chat-head">
         <div>
-          <p className="chat-label">PrivaLoom Chat</p>
+          <p className="chat-label">Priva Loom Chat</p>
           <h2>Local Model Conversation</h2>
         </div>
         <span className="chat-status">
