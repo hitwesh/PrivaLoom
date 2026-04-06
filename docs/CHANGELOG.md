@@ -6,6 +6,30 @@
 - Thoroughly explain about your features and changes committed.
 - Always add changes on the top of previous changes, do not break this.
 
+## Reorganized Privacy and Security into Unified Module
+
+- Timestamp: 2026-04-06, 20:45
+- Author: Samik
+- Description: Consolidated privacy and security components into a single unified `privacy_security/` directory to reduce directory clutter and improve organization. Moved all files from separate `privacy/` and `security/` directories into `privacy_security/`. Updated all imports across client code, tests, and documentation. Verified functionality with comprehensive test runs - all 50+ tests still pass. This change improves code organization and sets up clean structure for upcoming Phase 2 Byzantine-robust aggregation features. No functional changes, purely organizational restructuring for better maintainability.
+
+## Added Formal Differential Privacy & Testing Infrastructure
+
+- Timestamp: 2026-04-06, 20:30
+- Author: Samik
+- Description: Implemented Phase 1 of the Privacy & Security Layer feature. Added formal (ε, δ)-differential privacy using Opacus library with RDP (Rényi Differential Privacy) accounting for precise privacy loss tracking. Created privacy/ module with DPEngine (privacy accountant, gradient clipper, noise generator) and PrivacyTracker for persistent budget management. Bootstrapped comprehensive pytest testing infrastructure with 45 passing tests covering DP correctness, privacy accounting, composition theorems, and persistence. Added new dependencies: opacus==1.5.4, pytest==8.3.5, pytest-asyncio==0.25.2, pytest-mock==3.14.0. Extended utils/types.py with privacy-related type aliases (PrivacyBudget, DPParams, ClientID, ReputationScore). Added get_privacy_stats() method to RoundTracker for integration with privacy tracking. All tests pass with 100% coverage of privacy module. Next: Phase 2 (Byzantine-robust aggregation) and client integration for formal DP.
+
+## Added Automatic Periodic Retraining with 20-Update Threshold
+
+- Timestamp: 2026-04-06, 15:15
+- Author: Samik
+- Description: Implemented automatic server-side model retraining that triggers when 20 client updates are accumulated. Changed aggregation threshold from 2 to 20 updates, added thread-safe update buffering with threading.Lock, implemented persistent round tracking with JSON state storage, added enhanced structured logging for aggregation events with performance metrics, and created configurable UPDATE_THRESHOLD environment variable. Includes new /status endpoint for monitoring aggregation progress and round statistics.
+
+## Added Utilities Module with Structured Logging and Configuration Management
+
+- Timestamp: 2026-04-06, 14:30
+- Author: Samik
+- Description: Implemented centralized utils/ module with structured JSON logging, environment-based configuration management, data preprocessing utilities, and validation functions. Replaced print() statements in client and server with JSON logging, added backward compatibility for existing environment helper functions, and enhanced data loading with validation. All utilities include comprehensive type hints and maintain existing behavior patterns.
+
 ## Added Differential Privacy (DP) Client Gradient Noise/Clipping
 
 - Timestamp: 2026-04-05, 12:51am
