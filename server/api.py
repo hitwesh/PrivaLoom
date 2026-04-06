@@ -43,6 +43,10 @@ OUTLIER_DETECTION_ENABLED = config.get_bool("OUTLIER_DETECTION_ENABLED", True)
 REPUTATION_ENABLED = config.get_bool("REPUTATION_ENABLED", True)
 VALIDATION_ENABLED = config.get_bool("VALIDATION_ENABLED", True)
 
+# Simulation mode configuration
+SIMULATION_MODE = config.get_bool("SIMULATION_MODE", False)
+SIMULATION_LOGGING_VERBOSE = config.get_bool("SIMULATION_LOGGING_VERBOSE", False)
+
 # Initialize security components
 try:
     aggregation_config = AggregationConfig(
@@ -66,6 +70,16 @@ try:
         "reputation_enabled": REPUTATION_ENABLED,
         "validation_enabled": VALIDATION_ENABLED
     })
+
+    # Enhanced logging for simulation mode
+    if SIMULATION_MODE:
+        log_info(logger, "Simulation mode active", extra={
+            "simulation_mode": True,
+            "verbose_logging": SIMULATION_LOGGING_VERBOSE,
+            "aggregation_method": AGGREGATION_METHOD,
+            "byzantine_tolerance": BYZANTINE_TOLERANCE,
+            "update_threshold": UPDATE_THRESHOLD
+        })
 
 except Exception as e:
     log_error(logger, f"Failed to initialize security components: {e}")
@@ -120,6 +134,54 @@ def get_status() -> dict:
             "reputation_enabled": REPUTATION_ENABLED
         },
         "security_stats": security_stats
+    }
+
+
+@app.get("/simulation/metrics")
+def get_simulation_metrics() -> dict[str, any]:
+    """Get real-time simulation metrics for monitoring."""
+    from fastapi import HTTPException
+
+    if not SIMULATION_MODE:
+        raise HTTPException(status_code=404, detail="Simulation mode not active")
+
+    # Get client count from reputation manager
+    active_clients = 0
+    if reputation_manager:
+        try:
+            active_clients = len(reputation_manager.get_all_client_ids())
+        except AttributeError:
+            # Fallback if method doesn't exist
+            active_clients = 0
+
+    # Get recent security events
+    recent_security_events = 0
+    if security_monitor:
+        recent_events = security_monitor.get_recent_events(hours=1)
+        recent_security_events = len(recent_events)
+
+    # Get current round information
+    current_round = round_tracker.get_current_round()
+
+    # Get aggregation stats if available
+    aggregation_stats = {}
+    if hasattr(aggregator_factory, 'get_aggregation_stats'):
+        try:
+            aggregation_stats = aggregator_factory.get_aggregation_stats()
+        except:
+            pass
+
+    return {
+        "simulation_active": True,
+        "active_clients": active_clients,
+        "recent_security_events": recent_security_events,
+        "current_round": current_round,
+        "aggregation_method": AGGREGATION_METHOD,
+        "byzantine_tolerance": BYZANTINE_TOLERANCE,
+        "buffer_size": len(global_updates),
+        "update_threshold": UPDATE_THRESHOLD,
+        "aggregation_stats": aggregation_stats,
+        "timestamp": time.time()
     }
 
 @app.post("/chat")

@@ -1,0 +1,39 @@
+name: "coordinated_attack_simulation"
+description: "Test against sophisticated coordinated attacks"
+total_rounds: 80
+client_population:
+  total_clients: 40
+  honest_fraction: 0.6
+  malicious_types:
+    coordinated_malicious: 0.25
+    gradient_scaling: 0.15
+  participation_rate: 0.85
+  dropout_probability: 0.05
+  coordination_enabled: true
+  coordination_groups: 2
+data_distribution:
+  distribution_type: "non_iid"
+  heterogeneity_alpha: 0.4
+  samples_per_client: 800
+  min_samples_per_client: 100
+  max_samples_per_client: 2000
+  quality_variation: true
+  num_classes: 10
+  noise_clients_fraction: 0.1
+attack_config:
+  enabled: true
+  coordination_rate: 0.8
+  adaptive_attacks: true
+  attack_intensity: "high"
+  attack_schedule:
+    20: "scaling_burst"
+    40: "sign_flip_coordinated"
+    60: "adaptive_noise"
+environment_overrides:
+  AGGREGATION_METHOD: "krum"
+  BYZANTINE_TOLERANCE: "0.4"
+  OUTLIER_DETECTION_ENABLED: "true"
+  REPUTATION_ENABLED: "true"
+expected_outcomes:
+  min_final_accuracy: 0.4
+  max_attack_success_rate: 0.3

@@ -1,0 +1,34 @@
+name: "basic_federated_learning"
+description: "Basic federated learning with 20 honest clients and IID data distribution"
+total_rounds: 50
+client_population:
+  total_clients: 20
+  honest_fraction: 1.0
+  malicious_types: null
+  participation_rate: 0.8
+  dropout_probability: 0.02
+  coordination_enabled: false
+  coordination_groups: 2
+data_distribution:
+  distribution_type: "iid"
+  heterogeneity_alpha: 0.5
+  samples_per_client: 1000
+  min_samples_per_client: 100
+  max_samples_per_client: 2000
+  quality_variation: false
+  num_classes: 10
+  noise_clients_fraction: 0.1
+attack_config:
+  enabled: false
+  coordination_rate: 0.0
+  adaptive_attacks: false
+  attack_intensity: "medium"
+  attack_schedule: null
+environment_overrides:
+  AGGREGATION_METHOD: "fedavg"
+  UPDATE_THRESHOLD: "10"
+  OUTLIER_DETECTION_ENABLED: "false"
+expected_outcomes:
+  min_final_accuracy: 0.75
+  max_convergence_rounds: 40
+  max_security_events: 0

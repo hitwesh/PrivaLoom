@@ -1,0 +1,38 @@
+name: "byzantine_robustness_test"
+description: "Test system resilience with 30% malicious clients using robust aggregation"
+total_rounds: 100
+client_population:
+  total_clients: 50
+  honest_fraction: 0.7
+  malicious_types:
+    gradient_scaling: 0.15
+    sign_flipping: 0.15
+  participation_rate: 0.8
+  dropout_probability: 0.05
+  coordination_enabled: false
+  coordination_groups: 2
+data_distribution:
+  distribution_type: "non_iid"
+  heterogeneity_alpha: 0.5
+  samples_per_client: 1000
+  min_samples_per_client: 100
+  max_samples_per_client: 2000
+  quality_variation: true
+  num_classes: 10
+  noise_clients_fraction: 0.1
+attack_config:
+  enabled: true
+  coordination_rate: 0.3
+  adaptive_attacks: false
+  attack_intensity: "high"
+  attack_schedule: null
+environment_overrides:
+  AGGREGATION_METHOD: "trimmed_mean"
+  BYZANTINE_TOLERANCE: "0.3"
+  OUTLIER_DETECTION_ENABLED: "true"
+  REPUTATION_ENABLED: "true"
+  UPDATE_THRESHOLD: "15"
+expected_outcomes:
+  min_final_accuracy: 0.5
+  max_outlier_detection_rate: 0.95
+  min_security_events: 10

@@ -1,0 +1,36 @@
+name: "large_scale_simulation"
+description: "Large-scale performance testing with 500+ clients"
+total_rounds: 50
+client_population:
+  total_clients: 500
+  honest_fraction: 0.9
+  malicious_types:
+    gradient_scaling: 0.05
+    dropout_prone: 0.05
+  participation_rate: 0.6
+  dropout_probability: 0.1
+  coordination_enabled: false
+  coordination_groups: 2
+data_distribution:
+  distribution_type: "non_iid"
+  heterogeneity_alpha: 0.3
+  samples_per_client: 500
+  min_samples_per_client: 100
+  max_samples_per_client: 2000
+  quality_variation: true
+  num_classes: 10
+  noise_clients_fraction: 0.1
+attack_config:
+  enabled: true
+  coordination_rate: 0.0
+  adaptive_attacks: false
+  attack_intensity: "low"
+  attack_schedule: null
+environment_overrides:
+  AGGREGATION_METHOD: "median"
+  UPDATE_THRESHOLD: "50"
+  SIMULATION_MAX_CONCURRENT_CLIENTS: "100"
+expected_outcomes:
+  max_avg_round_duration: 10.0
+  min_throughput: 25.0
+  max_memory_usage_mb: 2000
