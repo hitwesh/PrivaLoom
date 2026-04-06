@@ -34,8 +34,8 @@ export default function AccessPortal({ onBack, onContinue }) {
         <p className="landing-eyebrow">Client Access</p>
         <h1>Choose account and workspace</h1>
         <p className="access-copy">
-          Dummy sign-in page for multi-client simulation. This step is UI-only and does not use
-          auth, RBAC, or database storage.
+          Select your account identity and workspace context to continue into the private training
+          console.
         </p>
 
         <label className="form-field">
@@ -43,7 +43,7 @@ export default function AccessPortal({ onBack, onContinue }) {
           <input
             className="field-input"
             type="text"
-            placeholder="e.g. riya.training"
+            placeholder="username"
             value={accountName}
             onChange={(event) => setAccountName(event.target.value)}
           />

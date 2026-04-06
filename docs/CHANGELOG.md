@@ -6,6 +6,11 @@
 - Thoroughly explain about your features and changes committed.
 - Always add changes on the top of previous changes, do not break this.
 
+## Split Architecture page, refined access copy, and workspace-aware CTA
+- Timestamp: 2026-04-06, 10:25pm
+- Author: Hitesh
+- Description: Added a dedicated Architecture route/view, removed sensitive implementation wording from access copy, changed account placeholder to username, and changed header CTA text/state so it no longer shows Try Workspace while already inside an active workspace.
+
 ## Replaced workspace login button with account badge and made update log action-driven
 - Timestamp: 2026-04-06, 10:11pm
 - Author: Hitesh 

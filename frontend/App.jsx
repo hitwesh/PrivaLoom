@@ -6,6 +6,7 @@ import ChatPanel from "./components/ChatPanel";
 import PrivacyBadge from "./components/PrivacyBadge";
 import LandingPage from "./components/LandingPage";
 import AccessPortal from "./components/AccessPortal";
+import ArchitecturePage from "./components/ArchitecturePage";
 
 const MAX_LOG_ITEMS = 8;
 
@@ -46,6 +47,7 @@ const createLogEntry = (text, tag) => ({
 export default function App() {
   const stageLabels = {
     landing: "Public Landing",
+    architecture: "Architecture",
     access: "Client Access",
     workspace: "Training Workspace",
   };
@@ -91,6 +93,10 @@ export default function App() {
   const renderStage = () => {
     if (stage === "landing") {
       return <LandingPage onStart={() => setStage("access")} />;
+    }
+
+    if (stage === "architecture") {
+      return <ArchitecturePage onStart={() => setStage("access")} />;
     }
 
     if (stage === "access") {
@@ -174,7 +180,11 @@ export default function App() {
             >
               Research
             </button>
-            <button className="site-nav-item" type="button" onClick={() => setStage("landing")}>
+            <button
+              className={`site-nav-item ${stage === "architecture" ? "is-active" : ""}`}
+              type="button"
+              onClick={() => setStage("architecture")}
+            >
               Architecture
             </button>
             <button
@@ -211,8 +221,9 @@ export default function App() {
               </button>
             )}
             <button
-              className="header-cta"
+              className={`header-cta ${stage === "workspace" && canOpenWorkspace ? "is-workspace-active" : ""}`}
               type="button"
+              disabled={stage === "workspace" && canOpenWorkspace}
               onClick={() => {
                 if (canOpenWorkspace) {
                   setStage("workspace");
@@ -222,7 +233,7 @@ export default function App() {
                 setStage("access");
               }}
             >
-              Try Workspace
+              {stage === "workspace" && canOpenWorkspace ? "Workspace Active" : "Try Workspace"}
             </button>
           </div>
         </div>
