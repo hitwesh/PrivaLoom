@@ -73,3 +73,7 @@ model/*
 *.pid
 *.seed
 *.stackdump
+
+# Runtime auth database
+data/*.db
+data/*.sqlite

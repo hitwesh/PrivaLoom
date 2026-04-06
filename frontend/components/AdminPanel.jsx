@@ -101,10 +101,14 @@ export default function AdminPanel({
   backendError,
   isRefreshing,
   isManagingUsers,
+  isLoadingAuthUsers,
   lastTelemetrySyncAt,
+  authUser,
+  authUsers = [],
   onRefresh,
   onAddUser,
   onRemoveUser,
+  onSimulateUser,
   onAdminActivity,
 }) {
   const [lastIntegrityRun, setLastIntegrityRun] = useState("Not yet run");
@@ -115,6 +119,23 @@ export default function AdminPanel({
   const [intervalHours, setIntervalHours] = useState(12);
   const [dataThresholdMb, setDataThresholdMb] = useState(512);
   const [panelFeedback, setPanelFeedback] = useState("");
+
+  if (authUser?.role !== "admin" || authUser?.is_simulating) {
+    return (
+      <section className="admin-shell card-surface">
+        <header className="admin-head">
+          <div>
+            <p className="admin-label">Admin Console</p>
+            <h2>Admin access is restricted</h2>
+            <p className="admin-copy">
+              Only active admin sessions can open this panel. Switch back from simulation or log
+              in as an admin account.
+            </p>
+          </div>
+        </header>
+      </section>
+    );
+  }
 
   const status = overview?.status || {};
   const securityStats = status.security_stats || {};
@@ -264,14 +285,17 @@ export default function AdminPanel({
   const handleAddUser = async () => {
     const normalized = newUserId.trim();
     if (!normalized) {
-      setPanelFeedback("Enter a user ID before adding.");
+      setPanelFeedback("Enter a username before adding.");
       return;
     }
 
     try {
       const result = await onAddUser?.(normalized);
       const status = result?.status === "exists" ? "already exists" : "added";
-      setPanelFeedback(`User ${normalized} ${status}.`);
+      const passwordText = result?.temporary_password
+        ? ` Temporary password: ${result.temporary_password}`
+        : "";
+      setPanelFeedback(`User ${normalized} ${status}.${passwordText}`);
       setNewUserId("");
       triggerActivity(`User ${normalized} ${status} from admin controls.`, "UserMgmt");
     } catch (error) {
@@ -281,13 +305,18 @@ export default function AdminPanel({
     }
   };
 
-  const handleRemoveUser = async (entry) => {
-    const targetId = entry?.backendClientId;
-    if (!targetId) {
+  const handleRemoveAccount = async (user) => {
+    const targetId = Number(user?.id);
+    if (!Number.isFinite(targetId)) {
       return;
     }
 
-    const confirmed = window.confirm(`Remove user ${targetId} from tracked clients?`);
+    if (targetId === authUser?.id) {
+      setPanelFeedback("You cannot remove the currently authenticated admin.");
+      return;
+    }
+
+    const confirmed = window.confirm(`Remove account ${user?.username} (id ${targetId})?`);
     if (!confirmed) {
       return;
     }
@@ -295,15 +324,32 @@ export default function AdminPanel({
     try {
       const result = await onRemoveUser?.(targetId);
       if (result?.status === "not_found") {
-        setPanelFeedback(`User ${targetId} was already removed.`);
+        setPanelFeedback(`Account ${targetId} was already removed.`);
       } else {
-        setPanelFeedback(`User ${targetId} removed.`);
+        setPanelFeedback(`Account ${targetId} removed.`);
       }
-      triggerActivity(`User ${targetId} removed from admin controls.`, "UserMgmt");
+      triggerActivity(`Account ${targetId} removed from admin controls.`, "UserMgmt");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to remove user.";
-      setPanelFeedback(`Failed to remove user: ${message}`);
-      triggerActivity(`Failed to remove user ${targetId}.`, "Error");
+      setPanelFeedback(`Failed to remove account: ${message}`);
+      triggerActivity(`Failed to remove account ${targetId}.`, "Error");
+    }
+  };
+
+  const handleSimulateAccount = async (user) => {
+    const targetId = Number(user?.id);
+    if (!Number.isFinite(targetId)) {
+      return;
+    }
+
+    try {
+      await onSimulateUser?.(targetId);
+      setPanelFeedback(`Now simulating ${user?.username}.`);
+      triggerActivity(`Simulation started for ${user?.username}.`, "UserMgmt");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to simulate user.";
+      setPanelFeedback(`Failed to simulate user: ${message}`);
+      triggerActivity(`Failed to simulate user ${user?.username}.`, "Error");
     }
   };
 
@@ -333,6 +379,13 @@ export default function AdminPanel({
   ];
 
   const scenarioNames = Array.isArray(simulation.scenarios) ? simulation.scenarios : [];
+  const managedUsers = useMemo(() => {
+    if (!Array.isArray(authUsers)) {
+      return [];
+    }
+
+    return [...authUsers].sort((a, b) => String(a.username || "").localeCompare(String(b.username || "")));
+  }, [authUsers]);
 
   return (
     <section className="admin-shell card-surface">
@@ -373,7 +426,7 @@ export default function AdminPanel({
               type="text"
               value={newUserId}
               onChange={(event) => setNewUserId(event.target.value)}
-              placeholder="new user id"
+              placeholder="new username"
               maxLength={128}
               disabled={isManagingUsers}
             />
@@ -390,7 +443,6 @@ export default function AdminPanel({
                   <th>Updates</th>
                   <th>Last sync</th>
                   <th>Status</th>
-                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -404,24 +456,55 @@ export default function AdminPanel({
                         {entry.status}
                       </span>
                     </td>
-                    <td>
-                      {entry.backendClientId ? (
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="admin-account-block">
+            <div className="admin-card-head">
+              <h3>Authenticated Accounts</h3>
+              <span>{managedUsers.length} accounts</span>
+            </div>
+
+            {isLoadingAuthUsers ? (
+              <p className="admin-user-note">Loading account list...</p>
+            ) : (
+              <div className="admin-account-list">
+                {managedUsers.map((user) => (
+                  <article key={user.id} className="admin-account-row">
+                    <div className="admin-account-id">
+                      <strong title={user.username}>{shortenLabel(user.username, 26)}</strong>
+                      <span>{String(user.role || "user").toUpperCase()}</span>
+                    </div>
+
+                    <div className="admin-account-actions">
+                      {user.id !== authUser?.id ? (
                         <button
                           type="button"
                           className="admin-user-remove-btn"
-                          onClick={() => handleRemoveUser(entry)}
+                          onClick={() => handleRemoveAccount(user)}
                           disabled={isManagingUsers}
                         >
                           Remove
                         </button>
                       ) : (
-                        <span className="admin-user-action-muted">-</span>
+                        <span className="admin-user-action-muted">Current</span>
                       )}
-                    </td>
-                  </tr>
+                      <button
+                        type="button"
+                        className="admin-user-add-btn"
+                        onClick={() => handleSimulateAccount(user)}
+                        disabled={isManagingUsers || user.id === authUser?.id}
+                      >
+                        Simulate
+                      </button>
+                    </div>
+                  </article>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            )}
           </div>
         </section>
 

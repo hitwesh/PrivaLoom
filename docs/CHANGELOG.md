@@ -6,6 +6,18 @@
 - Thoroughly explain about your features and changes committed.
 - Always add changes on the top of previous changes, do not break this.
 
+## Separated Login and Sign Up Access Flow
+
+- Timestamp: 2026-04-07, 02:53am
+- Author: Hitesh
+- Description: Added explicit Log in and Sign up mode controls in the access screen, enforced signup password length guidance, and fixed auth error handling so signup/login failures show correct user-facing messages instead of misleading backend-reachability text.
+
+## Added Database Authentication and RBAC
+
+- Timestamp: 2026-04-07, 02:47am
+- Author: Hitesh
+- Description: Added SQLite-backed users/sessions, bearer-token auth, role-gated admin APIs, admin user simulation/restore flow, and frontend role-aware login/logout with admin panel restrictions for non-admin and simulated sessions.
+
 ## Hid Simulation Clients from Frontend Admin Views
 
 - Timestamp: 2026-04-07, 02:18am

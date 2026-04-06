@@ -261,10 +261,9 @@ The project currently follows a strict update pattern:
 
 - in-memory update buffer only (no persistence)
 - no model checkpoint/version management after updates
-- no auth, client identity, or rate limiting
-- no anti-poisoning protections
-- no automated test suite
-- no frontend integration yet
+- auth is local SQLite-based only (no MFA, SSO, or password reset flow)
+- anti-poisoning protections are heuristic and need broader adversarial validation
+- automated tests exist, but auth/RBAC end-to-end coverage is still limited
 
 ## Roadmap alignment
 
@@ -272,15 +271,15 @@ Roadmap source:
 - `docs/roadmap.sh`
 
 Current position:
-- foundational phases are largely complete
-- privacy hardening, frontend, and robust multi-client/testing phases remain
+- foundational, frontend, and baseline auth/RBAC phases are complete
+- security hardening, persistence, and scale validation remain
 
 Recommended next focus:
-1. Add privacy primitives (clipping + DP noise + secure transport assumptions).
+1. Strengthen auth security (password policy, lockouts, optional MFA/SSO).
 2. Add persistence and model versioning for applied updates.
-3. Add endpoint authentication and basic abuse controls.
-4. Add tests for aggregation correctness and API contracts.
-5. Add minimal frontend for demoability and transparency.
+3. Expand auth/RBAC and aggregation API contract tests.
+4. Add auditable admin action logs and stronger observability.
+5. Package deployment profiles for local/staging/production.
 
 ## Troubleshooting
 

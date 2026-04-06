@@ -9,13 +9,21 @@ import AccessPortal from "./components/AccessPortal";
 import ArchitecturePage from "./components/ArchitecturePage";
 import AdminPanel from "./components/AdminPanel";
 import {
-  createAdminUser,
+  createAuthUser,
+  deleteAuthUser,
   getApiBaseUrl,
+  getAuthUser,
   getClientId,
+  getCurrentUser,
   getFrontendOverview,
   getHealth,
+  login,
+  logout,
+  register,
+  startUserSimulation,
+  stopUserSimulation,
+  listAuthUsers,
   normalizeError,
-  removeAdminUser,
   sendChatPrompt,
   sendModelUpdate,
 } from "./lib/api";
@@ -72,46 +80,165 @@ export default function App() {
   });
   const [activityLog, setActivityLog] = useState([]);
   const [workspaceView, setWorkspaceView] = useState("chat");
+  const [authUser, setAuthUser] = useState(getAuthUser());
+  const [authUsers, setAuthUsers] = useState([]);
   const [backendOverview, setBackendOverview] = useState(null);
   const [backendError, setBackendError] = useState("");
   const [isBootstrappingWorkspace, setIsBootstrappingWorkspace] = useState(false);
   const [isRefreshingOverview, setIsRefreshingOverview] = useState(false);
   const [isManagingUsers, setIsManagingUsers] = useState(false);
+  const [isLoadingAuthUsers, setIsLoadingAuthUsers] = useState(false);
+  const [isAuthReady, setIsAuthReady] = useState(false);
   const [lastTelemetrySyncAt, setLastTelemetrySyncAt] = useState(null);
   const previousOverviewRef = useRef(null);
 
-  const canOpenWorkspace = Boolean(session.accountName && session.clientWorkspace);
+  const hasAdminAccess = authUser?.role === "admin" && !authUser?.is_simulating;
+  const canOpenWorkspace = Boolean(authUser && session.accountName && session.clientWorkspace);
 
   const appendActivity = (text, tag) => {
     setActivityLog((prev) => [createLogEntry(text, tag), ...prev].slice(0, MAX_LOG_ITEMS));
   };
 
-  const handleAccessContinue = async ({ accountName, clientWorkspace }) => {
+  const formatAccessError = (error, authMode = "login") => {
+    const message = normalizeError(error);
+
+    if (message.includes("Failed to fetch") || message.includes("NetworkError")) {
+      return `Cannot reach backend at ${getApiBaseUrl()}.`;
+    }
+
+    if (message.includes("HTTP 401")) {
+      return "Invalid username or password.";
+    }
+
+    if (message.includes("username already exists")) {
+      return authMode === "signup"
+        ? "Account already exists. Switch to Log in."
+        : "This account already exists. Please log in.";
+    }
+
+    if (message.includes("password must be at least 6 characters")) {
+      return "Password must be at least 6 characters.";
+    }
+
+    return message;
+  };
+
+  const refreshAuthUsers = async () => {
+    if (!hasAdminAccess) {
+      setAuthUsers([]);
+      return [];
+    }
+
+    setIsLoadingAuthUsers(true);
+    try {
+      const payload = await listAuthUsers();
+      const users = Array.isArray(payload?.users) ? payload.users : [];
+      setAuthUsers(users);
+      return users;
+    } finally {
+      setIsLoadingAuthUsers(false);
+    }
+  };
+
+  useEffect(() => {
+    let isActive = true;
+
+    const hydrate = async () => {
+      if (!authUser) {
+        setIsAuthReady(true);
+        return;
+      }
+
+      try {
+        const payload = await getCurrentUser();
+        const nextUser = payload?.user || authUser;
+        if (!isActive) {
+          return;
+        }
+
+        setAuthUser(nextUser);
+        setSession((prev) => ({
+          accountName: nextUser?.username || prev.accountName,
+          clientWorkspace: prev.clientWorkspace || "Aster Capital",
+        }));
+      } catch {
+        if (isActive) {
+          setAuthUser(null);
+        }
+      } finally {
+        if (isActive) {
+          setIsAuthReady(true);
+        }
+      }
+    };
+
+    hydrate();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!hasAdminAccess) {
+      setAuthUsers([]);
+      return;
+    }
+
+    refreshAuthUsers().catch(() => {
+      // Managed via panel feedback and auth errors.
+    });
+  }, [hasAdminAccess, authUser?.id]);
+
+  useEffect(() => {
+    if (workspaceView === "admin" && !hasAdminAccess) {
+      setWorkspaceView("chat");
+    }
+  }, [workspaceView, hasAdminAccess]);
+
+  const handleAccessContinue = async ({ authMode = "login", accountName, password, clientWorkspace }) => {
     setIsBootstrappingWorkspace(true);
 
     try {
       await getHealth();
+
+      if (authMode === "signup") {
+        await register(accountName, password);
+        appendActivity(`New user account created for ${accountName}.`, "Auth");
+      }
+
+      const authPayload = await login(accountName, password);
+
+      const nextAuthUser = authPayload?.user || null;
+      setAuthUser(nextAuthUser);
+
       const overview = await getFrontendOverview();
       setBackendOverview(overview);
       previousOverviewRef.current = overview;
       setLastTelemetrySyncAt(Date.now());
       setBackendError("");
 
-      setSession({ accountName, clientWorkspace });
-      setWorkspaceView("chat");
+      const identityName = nextAuthUser?.username || accountName;
+      setSession({ accountName: identityName, clientWorkspace });
+      setWorkspaceView(nextAuthUser?.role === "admin" && !nextAuthUser?.is_simulating ? "admin" : "chat");
       setActivityLog([
-        createLogEntry(`Workspace opened for ${accountName} in ${clientWorkspace}.`, "Session"),
+        createLogEntry(`Workspace opened for ${identityName} in ${clientWorkspace}.`, "Session"),
         createLogEntry(
-          `Connected to backend at ${getApiBaseUrl()} with client ID ${getClientId().slice(0, 8)}...`,
+          `Connected to backend at ${getApiBaseUrl()} as ${identityName}.`,
           "Connectivity"
         ),
-        createLogEntry("Workspace synced with live aggregation and security telemetry.", "Sync"),
+        createLogEntry(
+          nextAuthUser?.role === "admin"
+            ? "Admin role granted: governance controls enabled."
+            : "User role granted: conversation and update controls enabled.",
+          "Auth"
+        ),
       ]);
       setStage("workspace");
 
       return { ok: true };
     } catch (error) {
-      const message = `Cannot reach backend at ${getApiBaseUrl()}: ${normalizeError(error)}`;
+      const message = formatAccessError(error, authMode);
       setBackendError(message);
       return { ok: false, error: message };
     } finally {
@@ -234,9 +361,10 @@ export default function App() {
     setIsManagingUsers(true);
 
     try {
-      const result = await createAdminUser(normalized);
+      const result = await createAuthUser(normalized, "", "user");
+      await refreshAuthUsers();
       await refreshOverview({ silent: true });
-      appendActivity(`Admin registered user ${normalized}.`, "Admin");
+      appendActivity(`Admin registered user account ${normalized}.`, "Admin");
       return result;
     } catch (error) {
       appendActivity(`Admin add-user failed: ${normalizeError(error)}`, "Error");
@@ -246,18 +374,19 @@ export default function App() {
     }
   };
 
-  const handleAdminRemoveUser = async (targetClientId) => {
-    const normalized = String(targetClientId || "").trim();
-    if (!normalized) {
-      throw new Error("User ID cannot be empty.");
+  const handleAdminRemoveUser = async (targetUserId) => {
+    const normalized = Number(targetUserId);
+    if (!Number.isFinite(normalized) || normalized <= 0) {
+      throw new Error("User ID is invalid.");
     }
 
     setIsManagingUsers(true);
 
     try {
-      const result = await removeAdminUser(normalized);
+      const result = await deleteAuthUser(normalized);
+      await refreshAuthUsers();
       await refreshOverview({ silent: true });
-      appendActivity(`Admin removed user ${normalized}.`, "Admin");
+      appendActivity(`Admin removed user account #${normalized}.`, "Admin");
       return result;
     } catch (error) {
       appendActivity(`Admin remove-user failed: ${normalizeError(error)}`, "Error");
@@ -265,6 +394,80 @@ export default function App() {
     } finally {
       setIsManagingUsers(false);
     }
+  };
+
+  const handleAdminSimulateUser = async (targetUserId) => {
+    const normalized = Number(targetUserId);
+    if (!Number.isFinite(normalized) || normalized <= 0) {
+      throw new Error("User ID is invalid.");
+    }
+
+    setIsManagingUsers(true);
+
+    try {
+      const payload = await startUserSimulation(normalized);
+      const nextUser = payload?.user || null;
+      setAuthUser(nextUser);
+      if (nextUser?.username) {
+        setSession((prev) => ({
+          accountName: nextUser.username,
+          clientWorkspace: prev.clientWorkspace || "Aster Capital",
+        }));
+      }
+      setWorkspaceView("chat");
+      await refreshOverview({ silent: true });
+      appendActivity(`Admin simulation started for user #${normalized}.`, "Admin");
+      return payload;
+    } catch (error) {
+      appendActivity(`Admin simulation failed: ${normalizeError(error)}`, "Error");
+      throw error;
+    } finally {
+      setIsManagingUsers(false);
+    }
+  };
+
+  const handleAdminStopSimulation = async () => {
+    setIsManagingUsers(true);
+
+    try {
+      const payload = await stopUserSimulation();
+      const nextUser = payload?.user || null;
+      setAuthUser(nextUser);
+      if (nextUser?.username) {
+        setSession((prev) => ({
+          accountName: nextUser.username,
+          clientWorkspace: prev.clientWorkspace || "Aster Capital",
+        }));
+      }
+      setWorkspaceView(nextUser?.role === "admin" ? "admin" : "chat");
+      await refreshOverview({ silent: true });
+      appendActivity("Admin simulation stopped.", "Admin");
+      return payload;
+    } catch (error) {
+      appendActivity(`Failed to stop simulation: ${normalizeError(error)}`, "Error");
+      throw error;
+    } finally {
+      setIsManagingUsers(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch {
+      // Session cleanup still proceeds locally.
+    }
+
+    setAuthUser(null);
+    setAuthUsers([]);
+    setBackendOverview(null);
+    setBackendError("");
+    setSession({
+      accountName: "",
+      clientWorkspace: "",
+    });
+    setWorkspaceView("chat");
+    setStage("access");
   };
 
   useEffect(() => {
@@ -307,6 +510,27 @@ export default function App() {
     }
 
     if (stage === "access") {
+      return (
+        <AccessPortal
+          onBack={() => setStage("landing")}
+          onContinue={handleAccessContinue}
+        />
+      );
+    }
+
+    if (!isAuthReady) {
+      return (
+        <section className="access-shell">
+          <div className="access-card card-surface">
+            <p className="landing-eyebrow">Session</p>
+            <h1>Restoring your authenticated workspace</h1>
+            <p className="access-copy">Please wait while PrivaLoom validates your session.</p>
+          </div>
+        </section>
+      );
+    }
+
+    if (!authUser) {
       return (
         <AccessPortal
           onBack={() => setStage("landing")}
@@ -377,13 +601,15 @@ export default function App() {
               >
                 Conversation
               </button>
-              <button
-                className={`workspace-view-btn ${workspaceView === "admin" ? "is-active" : ""}`}
-                type="button"
-                onClick={() => setWorkspaceView("admin")}
-              >
-                Admin Control
-              </button>
+              {hasAdminAccess ? (
+                <button
+                  className={`workspace-view-btn ${workspaceView === "admin" ? "is-active" : ""}`}
+                  type="button"
+                  onClick={() => setWorkspaceView("admin")}
+                >
+                  Admin Control
+                </button>
+              ) : null}
             </section>
 
             {workspaceView === "chat" ? (
@@ -404,10 +630,14 @@ export default function App() {
                 backendError={backendError}
                 isRefreshing={isRefreshingOverview}
                 isManagingUsers={isManagingUsers}
+                isLoadingAuthUsers={isLoadingAuthUsers}
                 lastTelemetrySyncAt={lastTelemetrySyncAt}
+                authUser={authUser}
+                authUsers={authUsers}
                 onRefresh={() => refreshOverview({ silent: false })}
                 onAddUser={handleAdminAddUser}
                 onRemoveUser={handleAdminRemoveUser}
+                onSimulateUser={handleAdminSimulateUser}
                 onAdminActivity={handleAdminActivity}
               />
             )}
@@ -469,10 +699,24 @@ export default function App() {
 
           <div className="site-header-actions">
             <span className="header-stage">{stageLabels[stage]}</span>
-            {stage === "workspace" && canOpenWorkspace ? (
-              <span className="header-account" title={`Active account: ${session.accountName}`}>
-                {session.accountName}
-              </span>
+            {authUser ? (
+              <>
+                <span
+                  className="header-account"
+                  title={`Active account: ${authUser.username} (${authUser.role})`}
+                >
+                  {authUser.username}
+                  {authUser.is_simulating ? " (simulating)" : ""}
+                </span>
+                {authUser.is_simulating && authUser.actor_role === "admin" ? (
+                  <button className="header-login" type="button" onClick={handleAdminStopSimulation}>
+                    Stop Simulation
+                  </button>
+                ) : null}
+                <button className="header-login" type="button" onClick={handleLogout}>
+                  Log out
+                </button>
+              </>
             ) : (
               <div>
                 <button className="header-login" type="button" onClick={() => setStage("access")}>

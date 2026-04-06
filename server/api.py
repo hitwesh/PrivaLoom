@@ -1,8 +1,9 @@
 import threading
 import time
+import secrets
 from datetime import datetime
 import torch
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Any, Optional
@@ -21,6 +22,20 @@ from privacy_security import (
     get_reputation_manager, calculate_quality_score, ClientReputation,
     get_security_monitor, create_malicious_update_event, create_outlier_event,
     create_update_validator, ValidationError, get_privacy_tracker
+)
+from server.auth_db import (
+    ROLE_ADMIN,
+    ROLE_USER,
+    authenticate_user,
+    create_session,
+    create_user,
+    delete_user,
+    get_session_context,
+    get_user_by_id,
+    get_user_count,
+    init_auth_db,
+    list_users,
+    revoke_session,
 )
 
 app = FastAPI()
@@ -65,6 +80,21 @@ VALIDATION_ENABLED = config.get_bool("VALIDATION_ENABLED", True)
 # Simulation mode configuration
 SIMULATION_MODE = config.get_bool("SIMULATION_MODE", False)
 SIMULATION_LOGGING_VERBOSE = config.get_bool("SIMULATION_LOGGING_VERBOSE", False)
+
+# Authentication / RBAC configuration
+AUTH_ENABLED = config.get_bool("AUTH_ENABLED", True)
+AUTH_DB_PATH = config.get_str("AUTH_DB_PATH", "data/auth.db")
+AUTH_BOOTSTRAP_ADMIN = config.get_str("AUTH_BOOTSTRAP_ADMIN", "admin")
+AUTH_BOOTSTRAP_PASSWORD = config.get_str("AUTH_BOOTSTRAP_PASSWORD", "admin123")
+
+try:
+    init_auth_db(
+        AUTH_DB_PATH,
+        bootstrap_admin_username=AUTH_BOOTSTRAP_ADMIN,
+        bootstrap_admin_password=AUTH_BOOTSTRAP_PASSWORD,
+    )
+except Exception as e:
+    log_error(logger, f"Failed to initialize auth database: {e}")
 
 # Initialize security components
 try:
@@ -121,6 +151,23 @@ class UpdateRequest(BaseModel):
 
 class AdminUserRequest(BaseModel):
     client_id: str
+
+
+class AuthRegisterRequest(BaseModel):
+    username: str
+    password: str
+    role: Optional[str] = None
+
+
+class AuthLoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class AuthUserRequest(BaseModel):
+    username: str
+    password: Optional[str] = None
+    role: str = ROLE_USER
 
 
 SIMULATION_CLIENT_PREFIXES = (
@@ -220,6 +267,81 @@ def _remove_reputation_client(client_id: str) -> bool:
             return _remove()
 
     return _remove()
+
+
+def _extract_bearer_token(authorization: Optional[str]) -> Optional[str]:
+    if not authorization:
+        return None
+
+    parts = authorization.strip().split(" ", 1)
+    if len(parts) != 2:
+        return None
+
+    if parts[0].lower() != "bearer":
+        return None
+
+    token = parts[1].strip()
+    return token or None
+
+
+def _require_auth(authorization: Optional[str]) -> dict[str, Any]:
+    if not AUTH_ENABLED:
+        return {
+            "token": "auth-disabled",
+            "session_user_id": 0,
+            "session_username": "auth-disabled",
+            "session_role": ROLE_ADMIN,
+            "effective_user_id": 0,
+            "effective_username": "auth-disabled",
+            "effective_role": ROLE_ADMIN,
+            "is_simulating": False,
+            "expires_at": "",
+            "created_at": "",
+        }
+
+    token = _extract_bearer_token(authorization)
+    if not token:
+        raise HTTPException(status_code=401, detail="Missing bearer token")
+
+    context = get_session_context(token)
+    if not context:
+        raise HTTPException(status_code=401, detail="Invalid or expired session")
+
+    return context
+
+
+def _require_admin(
+    authorization: Optional[str],
+    *,
+    allow_simulated_admin: bool = False,
+) -> dict[str, Any]:
+    context = _require_auth(authorization)
+    if context.get("session_role") != ROLE_ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    if context.get("is_simulating") and not allow_simulated_admin:
+        raise HTTPException(status_code=403, detail="Stop simulation to access admin controls")
+
+    return context
+
+
+def _serialize_auth_context(context: dict[str, Any], token: str) -> dict[str, Any]:
+    return {
+        "token": token,
+        "user": {
+            "id": context["effective_user_id"],
+            "username": context["effective_username"],
+            "role": context["effective_role"],
+            "is_simulating": bool(context.get("is_simulating", False)),
+            "actor_role": context.get("session_role"),
+            "actor_username": context.get("session_username"),
+            "expires_at": context.get("expires_at"),
+        },
+    }
+
+
+def _create_temp_password() -> str:
+    return f"Tmp-{secrets.token_urlsafe(9)}"
 
 
 def _get_reputation_clients(limit: int = 50) -> list[dict[str, Any]]:
@@ -329,9 +451,189 @@ def home() -> dict[str, str]:
     return {"message": "PrivaLoom Server with Byzantine Robust Aggregation"}
 
 
+@app.post("/auth/register")
+def auth_register(
+    request: AuthRegisterRequest,
+    authorization: Optional[str] = Header(default=None),
+) -> dict[str, Any]:
+    """Create a new authenticated user account."""
+    if not AUTH_ENABLED:
+        raise HTTPException(status_code=503, detail="Authentication is disabled")
+
+    requested_role = (request.role or ROLE_USER).strip().lower()
+    if requested_role not in {ROLE_USER, ROLE_ADMIN}:
+        raise HTTPException(status_code=400, detail="Invalid role")
+
+    user_count = get_user_count()
+    if requested_role == ROLE_ADMIN and user_count > 0:
+        _require_admin(authorization)
+
+    if user_count == 0 and request.role is None:
+        requested_role = ROLE_ADMIN
+
+    try:
+        user = create_user(request.username, request.password, requested_role)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    return {
+        "status": "created",
+        "user": user,
+    }
+
+
+@app.post("/auth/login")
+def auth_login(request: AuthLoginRequest) -> dict[str, Any]:
+    """Authenticate username/password and issue a session token."""
+    if not AUTH_ENABLED:
+        raise HTTPException(status_code=503, detail="Authentication is disabled")
+
+    user = authenticate_user(request.username, request.password)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+
+    token = create_session(user["id"])
+    context = get_session_context(token)
+    if not context:
+        raise HTTPException(status_code=500, detail="Failed to create session")
+
+    return _serialize_auth_context(context, token)
+
+
+@app.post("/auth/logout")
+def auth_logout(authorization: Optional[str] = Header(default=None)) -> dict[str, str]:
+    """Revoke current session token."""
+    context = _require_auth(authorization)
+    revoke_session(context["token"])
+    return {"status": "logged_out"}
+
+
+@app.get("/auth/me")
+def auth_me(authorization: Optional[str] = Header(default=None)) -> dict[str, Any]:
+    """Return current authenticated user context."""
+    context = _require_auth(authorization)
+    return _serialize_auth_context(context, context["token"])
+
+
+@app.get("/auth/users")
+def auth_list_users(authorization: Optional[str] = Header(default=None)) -> dict[str, Any]:
+    """Admin-only user account listing."""
+    _require_admin(authorization)
+    users = list_users()
+    return {
+        "count": len(users),
+        "users": users,
+    }
+
+
+@app.post("/auth/users")
+def auth_create_user(
+    request: AuthUserRequest,
+    authorization: Optional[str] = Header(default=None),
+) -> dict[str, Any]:
+    """Admin-only account creation."""
+    _require_admin(authorization)
+
+    role = request.role.strip().lower()
+    if role not in {ROLE_ADMIN, ROLE_USER}:
+        raise HTTPException(status_code=400, detail="Invalid role")
+
+    generated_password = None
+    password = request.password
+    if not password:
+        generated_password = _create_temp_password()
+        password = generated_password
+
+    try:
+        user = create_user(request.username, password, role)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    response: dict[str, Any] = {
+        "status": "created",
+        "user": user,
+    }
+    if generated_password:
+        response["temporary_password"] = generated_password
+    return response
+
+
+@app.delete("/auth/users/{user_id}")
+def auth_delete_user(
+    user_id: int,
+    authorization: Optional[str] = Header(default=None),
+) -> dict[str, Any]:
+    """Admin-only account deletion."""
+    context = _require_admin(authorization)
+
+    if context["session_user_id"] == user_id:
+        raise HTTPException(status_code=400, detail="Cannot delete currently authenticated admin")
+
+    user = get_user_by_id(user_id)
+    if not user:
+        return {"status": "not_found", "user_id": user_id}
+
+    removed = delete_user(user_id)
+    if user.get("username"):
+        _remove_reputation_client(user["username"])
+
+    return {
+        "status": "removed" if removed else "not_found",
+        "user_id": user_id,
+    }
+
+
+@app.post("/auth/simulate/user/{user_id}")
+def auth_simulate_user(
+    user_id: int,
+    authorization: Optional[str] = Header(default=None),
+) -> dict[str, Any]:
+    """Admin-only impersonation: issue a token acting as selected user."""
+    context = _require_admin(authorization)
+
+    target_user = get_user_by_id(user_id)
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Target user not found")
+
+    if target_user.get("role") != ROLE_USER:
+        raise HTTPException(status_code=400, detail="Only user accounts can be simulated")
+
+    if target_user.get("id") == context.get("session_user_id"):
+        raise HTTPException(status_code=400, detail="Cannot simulate the current admin account")
+
+    simulated_token = create_session(
+        context["session_user_id"],
+        acting_as_user_id=user_id,
+    )
+    simulated_context = get_session_context(simulated_token)
+    if not simulated_context:
+        raise HTTPException(status_code=500, detail="Failed to create simulation session")
+
+    return _serialize_auth_context(simulated_context, simulated_token)
+
+
+@app.post("/auth/simulate/stop")
+def auth_stop_simulation(authorization: Optional[str] = Header(default=None)) -> dict[str, Any]:
+    """Stop impersonation and return a token for the admin identity."""
+    context = _require_admin(authorization, allow_simulated_admin=True)
+    if not context.get("is_simulating"):
+        raise HTTPException(status_code=400, detail="No active simulation session")
+
+    restore_token = create_session(context["session_user_id"])
+    restored_context = get_session_context(restore_token)
+    revoke_session(context["token"])
+
+    if not restored_context:
+        raise HTTPException(status_code=500, detail="Failed to restore admin session")
+
+    return _serialize_auth_context(restored_context, restore_token)
+
+
 @app.get("/status")
-def get_status() -> dict:
+def get_status(authorization: Optional[str] = Header(default=None)) -> dict:
     """Get current aggregation status and statistics."""
+    _require_auth(authorization)
+
     with update_buffer_lock:
         current_buffer_size = len(global_updates)
 
@@ -363,8 +665,10 @@ def get_status() -> dict:
 
 
 @app.get("/simulation/metrics")
-def get_simulation_metrics() -> dict[str, Any]:
+def get_simulation_metrics(authorization: Optional[str] = Header(default=None)) -> dict[str, Any]:
     """Get real-time simulation metrics for monitoring."""
+    _require_auth(authorization)
+
     metrics = _get_simulation_metrics_payload()
     if metrics is None:
         raise HTTPException(status_code=404, detail="Simulation mode not active")
@@ -372,8 +676,13 @@ def get_simulation_metrics() -> dict[str, Any]:
 
 
 @app.get("/reputation/clients")
-def get_reputation_clients(limit: int = 50) -> dict[str, Any]:
+def get_reputation_clients(
+    limit: int = 50,
+    authorization: Optional[str] = Header(default=None),
+) -> dict[str, Any]:
     """Get client-level reputation details for frontend admin views."""
+    _require_admin(authorization)
+
     safe_limit = max(1, min(limit, 200))
     clients = _get_reputation_clients(limit=safe_limit)
     return {
@@ -383,8 +692,13 @@ def get_reputation_clients(limit: int = 50) -> dict[str, Any]:
 
 
 @app.post("/admin/users")
-def admin_add_user(request: AdminUserRequest) -> dict[str, Any]:
+def admin_add_user(
+    request: AdminUserRequest,
+    authorization: Optional[str] = Header(default=None),
+) -> dict[str, Any]:
     """Register a reputation client for admin management."""
+    _require_admin(authorization)
+
     normalized = request.client_id.strip()
     if not normalized:
         raise HTTPException(status_code=400, detail="client_id cannot be empty")
@@ -404,8 +718,13 @@ def admin_add_user(request: AdminUserRequest) -> dict[str, Any]:
 
 
 @app.delete("/admin/users/{client_id}")
-def admin_remove_user(client_id: str) -> dict[str, Any]:
+def admin_remove_user(
+    client_id: str,
+    authorization: Optional[str] = Header(default=None),
+) -> dict[str, Any]:
     """Remove a reputation client from admin-managed list."""
+    _require_admin(authorization)
+
     normalized = client_id.strip()
     if not normalized:
         raise HTTPException(status_code=400, detail="client_id cannot be empty")
@@ -421,8 +740,14 @@ def admin_remove_user(client_id: str) -> dict[str, Any]:
 
 
 @app.get("/security/events")
-def get_security_events(hours: int = 24, limit: int = 50) -> dict[str, Any]:
+def get_security_events(
+    hours: int = 24,
+    limit: int = 50,
+    authorization: Optional[str] = Header(default=None),
+) -> dict[str, Any]:
     """Get recent security events with optional window and result limit."""
+    _require_admin(authorization)
+
     safe_hours = max(1, min(hours, 168))
     safe_limit = max(1, min(limit, 200))
     events = _get_recent_security_events(hours=safe_hours, limit=safe_limit)
@@ -434,15 +759,18 @@ def get_security_events(hours: int = 24, limit: int = 50) -> dict[str, Any]:
 
 
 @app.get("/simulation/scenarios")
-def list_simulation_scenarios() -> dict[str, Any]:
+def list_simulation_scenarios(authorization: Optional[str] = Header(default=None)) -> dict[str, Any]:
     """List available simulation scenarios for frontend controls."""
+    _require_auth(authorization)
     return {"scenarios": _get_simulation_scenario_names()}
 
 
 @app.get("/frontend/overview")
-def get_frontend_overview() -> dict[str, Any]:
+def get_frontend_overview(authorization: Optional[str] = Header(default=None)) -> dict[str, Any]:
     """Consolidated dashboard payload for frontend integration."""
-    status_payload = get_status()
+    context = _require_auth(authorization)
+    has_admin_access = context.get("session_role") == ROLE_ADMIN and not context.get("is_simulating")
+    status_payload = get_status(authorization)
     simulation_payload = _get_simulation_metrics_payload()
 
     privacy_payload: dict[str, Any] = {}
@@ -453,8 +781,8 @@ def get_frontend_overview() -> dict[str, Any]:
 
     return {
         "status": status_payload,
-        "reputation_clients": _get_reputation_clients(limit=100),
-        "recent_security_events": _get_recent_security_events(hours=24, limit=50),
+        "reputation_clients": _get_reputation_clients(limit=100) if has_admin_access else [],
+        "recent_security_events": _get_recent_security_events(hours=24, limit=50) if has_admin_access else [],
         "simulation": {
             "enabled": SIMULATION_MODE,
             "metrics": simulation_payload,
@@ -466,16 +794,25 @@ def get_frontend_overview() -> dict[str, Any]:
     }
 
 @app.post("/chat")
-def chat(request: ChatRequest) -> dict[str, str]:
+def chat(
+    request: ChatRequest,
+    authorization: Optional[str] = Header(default=None),
+) -> dict[str, str]:
+    _require_auth(authorization)
+
     user_input = request.prompt
     response = generate_response(user_input)
     return {"input": user_input, "response": response}
 
 
 @app.post("/send-update")
-def receive_update(update: UpdateRequest) -> dict[str, Any]:
+def receive_update(
+    update: UpdateRequest,
+    authorization: Optional[str] = Header(default=None),
+) -> dict[str, Any]:
     """Enhanced update endpoint with Byzantine-robust aggregation and security."""
-    client_id = update.client_id
+    context = _require_auth(authorization)
+    client_id = context.get("effective_username") or update.client_id
 
     try:
         # Step 1: Input validation and sanitization

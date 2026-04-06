@@ -824,6 +824,35 @@ body {
   font-size: clamp(30px, 4vw, 38px);
 }
 
+.access-mode-switch {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.access-mode-btn {
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid #4f525b;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.access-mode-btn.is-active {
+  color: var(--text-main);
+  border-color: #737887;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.access-mode-btn:hover {
+  border-color: #6b6f79;
+}
+
 .form-field {
   margin-top: 14px;
   display: grid;
@@ -862,6 +891,12 @@ body {
   color: var(--text-main);
   font-size: 12px;
   background: rgba(255, 255, 255, 0.08);
+}
+
+.access-hint {
+  margin: 8px 0 0;
+  color: var(--text-subtle);
+  font-size: 12px;
 }
 
 .access-actions {
@@ -1590,17 +1625,64 @@ body {
   overflow-wrap: anywhere;
 }
 
-.admin-table th:last-child,
-.admin-table td:last-child {
-  text-align: right;
-  width: 92px;
-}
-
 .admin-user-note {
   margin: 0 0 10px;
   color: var(--text-soft);
   font-size: 12px;
   line-height: 1.45;
+}
+
+.admin-account-block {
+  margin-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 12px;
+}
+
+.admin-account-list {
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 6px;
+  display: grid;
+  gap: 6px;
+}
+
+.admin-account-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.admin-account-id {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.admin-account-id strong {
+  color: var(--text-main);
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-account-id span {
+  color: var(--text-subtle);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+.admin-account-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .admin-user-controls {
@@ -1638,6 +1720,12 @@ body {
   font-weight: 700;
   padding: 0 10px;
   cursor: pointer;
+}
+
+.admin-user-add-btn:disabled,
+.admin-user-remove-btn:disabled {
+  cursor: default;
+  opacity: 0.55;
 }
 
 .admin-user-add-btn:hover,
@@ -2396,6 +2484,17 @@ body {
 
   .admin-user-add-btn {
     width: 100%;
+  }
+
+  .admin-account-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .admin-account-actions {
+    width: 100%;
+    justify-content: flex-end;
+    flex-wrap: wrap;
   }
 
   .upload-controls {
