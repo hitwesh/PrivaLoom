@@ -116,11 +116,14 @@ export async function sendChatPrompt(prompt) {
 }
 
 export async function sendModelUpdate(weights) {
+  const authUser = getAuthUser();
+  const updateClientId = authUser?.username || getClientId();
+
   return request("/send-update", {
     method: "POST",
     body: JSON.stringify({
       weights,
-      client_id: getClientId(),
+      client_id: updateClientId,
       timestamp: Math.floor(Date.now() / 1000),
     }),
   });

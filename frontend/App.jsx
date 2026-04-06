@@ -196,6 +196,12 @@ export default function App() {
     }
   }, [workspaceView, hasAdminAccess]);
 
+  useEffect(() => {
+    if (stage === "access" && authUser) {
+      setStage("workspace");
+    }
+  }, [stage, authUser]);
+
   const handleAccessContinue = async ({ authMode = "login", accountName, password, clientWorkspace }) => {
     setIsBootstrappingWorkspace(true);
 
@@ -509,7 +515,7 @@ export default function App() {
       return <ArchitecturePage onStart={() => setStage("access")} />;
     }
 
-    if (stage === "access") {
+    if (stage === "access" && !authUser) {
       return (
         <AccessPortal
           onBack={() => setStage("landing")}
@@ -564,7 +570,7 @@ export default function App() {
             <button
               className="btn-ghost"
               type="button"
-              onClick={() => setStage("access")}
+              onClick={handleLogout}
             >
               Switch Account
             </button>
@@ -678,7 +684,14 @@ export default function App() {
             <button
               className={`site-nav-item ${stage === "access" ? "is-active" : ""}`}
               type="button"
-              onClick={() => setStage("access")}
+              onClick={() => {
+                if (authUser) {
+                  setStage("workspace");
+                  return;
+                }
+
+                setStage("access");
+              }}
             >
               Access
             </button>

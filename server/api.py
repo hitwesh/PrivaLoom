@@ -813,11 +813,15 @@ def receive_update(
     """Enhanced update endpoint with Byzantine-robust aggregation and security."""
     context = _require_auth(authorization)
     client_id = context.get("effective_username") or update.client_id
+    validation_confidence = 1.0
 
     try:
         # Step 1: Input validation and sanitization
         if update_validator:
-            validation_result = update_validator.validate_update(update.dict(), client_id)
+            canonical_update = update.dict()
+            # Enforce authenticated identity as source-of-truth for validation.
+            canonical_update["client_id"] = client_id
+            validation_result = update_validator.validate_update(canonical_update, client_id)
 
             if not validation_result.is_valid:
                 log_warning(logger, f"Update validation failed for client {client_id}",
@@ -830,6 +834,7 @@ def receive_update(
 
             # Use sanitized update
             sanitized_weights = validation_result.sanitized_update
+            validation_confidence = getattr(validation_result, "confidence", 1.0)
         else:
             sanitized_weights = update.weights
 
@@ -853,7 +858,7 @@ def receive_update(
                 "weights": sanitized_weights,
                 "client_id": client_id,
                 "timestamp": update.timestamp or int(time.time()),
-                "validation_confidence": getattr(validation_result, 'confidence', 1.0) if update_validator else 1.0
+                "validation_confidence": validation_confidence,
             })
             current_count = len(global_updates)
 

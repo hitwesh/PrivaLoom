@@ -6,6 +6,18 @@
 - Thoroughly explain about your features and changes committed.
 - Always add changes on the top of previous changes, do not break this.
 
+## Fixed Authenticated Update Client-ID Mismatch
+
+- Timestamp: 2026-04-07, 03:00am
+- Author: Hitesh
+- Description: Fixed update validation rejections caused by mismatched client IDs by enforcing authenticated identity during backend validation and aligning frontend send-update payload client_id with the logged-in username.
+
+## Blocked Access Page for Active Sessions
+
+- Timestamp: 2026-04-07, 02:55am
+- Author: Hitesh
+- Description: Logged-in users are now redirected to Workspace instead of seeing the login/signup page; Access nav and Switch Account behavior were updated accordingly.
+
 ## Separated Login and Sign Up Access Flow
 
 - Timestamp: 2026-04-07, 02:53am
