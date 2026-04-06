@@ -6,6 +6,11 @@
 - Thoroughly explain about your features and changes committed.
 - Always add changes on the top of previous changes, do not break this.
 
+## Added React Frontend UI for SLM Training & Testing Dashboard
+- Timestamp: 2026-04-06, 01:56pm
+- Author: Riya
+- Description: Built a React dashboard with dataset upload, local parsing, training integration, update tracking, and chat-based model testing with privacy-         preserving update flow.
+
 ## Added Differential Privacy (DP) Client Gradient Noise/Clipping
 
 - Timestamp: 2026-04-05, 12:51am
