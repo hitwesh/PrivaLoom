@@ -59,6 +59,9 @@ venv/
 specs/
 plans/
 
+#Tests
+tests/
+
 # Hugging Face local model artifacts
 model/*
 !model/*.py
