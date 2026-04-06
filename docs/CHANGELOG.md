@@ -8,7 +8,7 @@
 
 ## Fixed frontend Vite entry path and missing dashboard components
 - Timestamp: 2026-04-06, 07:44pm
-- Author: Copilot
+- Author: Hitesh
 - Description: Fixed frontend startup by updating index module path from /src/main.jsx to /main.jsx and restored missing React dashboard components (UploadPanel, TrainingStatus, UpdateLog, ChatPanel, PrivacyBadge) required by App.jsx so Vite resolves imports correctly.
 
 ## Added React Frontend UI for SLM Training & Testing Dashboard
