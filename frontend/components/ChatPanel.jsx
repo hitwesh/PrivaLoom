@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export default function ChatPanel({ accountName, clientWorkspace }) {
+export default function ChatPanel({ accountName, clientWorkspace, onPromptSubmitted }) {
   const [message, setMessage] = useState("");
   const [history, setHistory] = useState([
     {
@@ -14,6 +14,8 @@ export default function ChatPanel({ accountName, clientWorkspace }) {
     if (!trimmed) {
       return;
     }
+
+    onPromptSubmitted?.(trimmed);
 
     setHistory((prev) => [
       ...prev,

@@ -1,11 +1,19 @@
 import { useState } from "react";
 
-export default function UploadPanel() {
+export default function UploadPanel({ onDocumentChange }) {
   const [fileName, setFileName] = useState("");
 
   const handleFileChange = (event) => {
     const file = event.target.files?.[0];
     setFileName(file ? file.name : "");
+
+    if (file) {
+      onDocumentChange?.({
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type || "unknown",
+      });
+    }
   };
 
   return (

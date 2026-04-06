@@ -7,6 +7,8 @@ import PrivacyBadge from "./components/PrivacyBadge";
 import LandingPage from "./components/LandingPage";
 import AccessPortal from "./components/AccessPortal";
 
+const MAX_LOG_ITEMS = 8;
+
 const footerColumns = [
   {
     title: "Platform",
@@ -28,6 +30,19 @@ const footerColumns = [
 
 const socialChannels = ["X", "GitHub", "LinkedIn", "Discord"];
 
+const getTimeLabel = () =>
+  new Date().toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+
+const createLogEntry = (text, tag) => ({
+  time: getTimeLabel(),
+  text,
+  tag,
+});
+
 export default function App() {
   const stageLabels = {
     landing: "Public Landing",
@@ -40,12 +55,37 @@ export default function App() {
     accountName: "",
     clientWorkspace: "",
   });
+  const [activityLog, setActivityLog] = useState([]);
 
   const canOpenWorkspace = Boolean(session.accountName && session.clientWorkspace);
 
+  const appendActivity = (text, tag) => {
+    setActivityLog((prev) => [createLogEntry(text, tag), ...prev].slice(0, MAX_LOG_ITEMS));
+  };
+
   const handleAccessContinue = ({ accountName, clientWorkspace }) => {
     setSession({ accountName, clientWorkspace });
+    setActivityLog([
+      createLogEntry(`Workspace opened for ${accountName} in ${clientWorkspace}.`, "Session"),
+      createLogEntry("Awaiting first document upload for local training updates.", "Data"),
+      createLogEntry("Private model channel initialized for this workspace.", "Model"),
+    ]);
     setStage("workspace");
+  };
+
+  const handleDocumentChange = ({ fileName, fileSize }) => {
+    const sizeLabel = fileSize >= 1024 * 1024
+      ? `${(fileSize / (1024 * 1024)).toFixed(1)} MB`
+      : `${Math.max(1, Math.round(fileSize / 1024))} KB`;
+
+    appendActivity(`Document staged: ${fileName} (${sizeLabel}).`, "Document");
+    appendActivity("Local update extraction queued after validation checks.", "Pipeline");
+  };
+
+  const handlePromptSubmitted = (prompt) => {
+    const trimmedPreview = prompt.length > 58 ? `${prompt.slice(0, 58)}...` : prompt;
+    appendActivity(`Prompt submitted: "${trimmedPreview}"`, "Prompt");
+    appendActivity("Learning signal generation triggered from latest interaction.", "Update");
   };
 
   const renderStage = () => {
@@ -94,9 +134,9 @@ export default function App() {
           </section>
 
           <div className="sidebar-stack">
-            <UploadPanel />
+            <UploadPanel onDocumentChange={handleDocumentChange} />
             <TrainingStatus />
-            <UpdateLog />
+            <UpdateLog updates={activityLog} />
           </div>
 
           <PrivacyBadge />
@@ -106,6 +146,7 @@ export default function App() {
           <ChatPanel
             accountName={session.accountName}
             clientWorkspace={session.clientWorkspace}
+            onPromptSubmitted={handlePromptSubmitted}
           />
         </main>
       </div>
@@ -160,9 +201,15 @@ export default function App() {
 
           <div className="site-header-actions">
             <span className="header-stage">{stageLabels[stage]}</span>
-            <button className="header-login" type="button" onClick={() => setStage("access")}>
-              Log in
-            </button>
+            {stage === "workspace" && canOpenWorkspace ? (
+              <span className="header-account" title={`Active account: ${session.accountName}`}>
+                {session.accountName}
+              </span>
+            ) : (
+              <button className="header-login" type="button" onClick={() => setStage("access")}>
+                Log in
+              </button>
+            )}
             <button
               className="header-cta"
               type="button"

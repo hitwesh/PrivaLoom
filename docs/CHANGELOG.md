@@ -6,6 +6,11 @@
 - Thoroughly explain about your features and changes committed.
 - Always add changes on the top of previous changes, do not break this.
 
+## Replaced workspace login button with account badge and made update log action-driven
+- Timestamp: 2026-04-06, 10:11pm
+- Author: Hitesh 
+- Description: Updated the header actions so the Log in button is no longer shown inside the active workspace; it now displays the current account name as a session badge. Reworked Update Log from hardcoded development history to a meaningful live activity feed powered by actual user actions in the console (document uploads and prompt submissions), including session boot entries when a workspace opens. This keeps the UI useful now while remaining easy to connect to backend events later.
+
 ## Added OpenAI-inspired navigation, explanatory project body, and structured footer
 - Timestamp: 2026-04-06, 09:55pm
 - Author: Hitesh
