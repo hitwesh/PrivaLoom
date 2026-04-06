@@ -1,0 +1,34 @@
+attack_config:
+  adaptive_attacks: false
+  attack_intensity: medium
+  attack_schedule: null
+  coordination_rate: 0.0
+  enabled: true
+client_population:
+  coordination_enabled: false
+  coordination_groups: 2
+  dropout_probability: 0.05
+  honest_fraction: 0.8
+  malicious_types:
+    sign_flipping: 0.2
+  participation_rate: 0.6
+  total_clients: 30
+data_distribution:
+  distribution_type: pathological
+  heterogeneity_alpha: 0.5
+  max_samples_per_client: 2000
+  min_samples_per_client: 100
+  noise_clients_fraction: 0.3
+  num_classes: 10
+  quality_variation: true
+  samples_per_client: 600
+description: Extreme heterogeneity with pathological data distribution
+environment_overrides:
+  AGGREGATION_METHOD: median
+  BYZANTINE_TOLERANCE: '0.2'
+  OUTLIER_DETECTION_ENABLED: 'true'
+expected_outcomes:
+  max_convergence_rounds: 100
+  min_final_accuracy: 0.3
+name: pathological_non_iid
+total_rounds: 120

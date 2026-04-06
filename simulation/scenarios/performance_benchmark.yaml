@@ -1,0 +1,32 @@
+attack_config:
+  adaptive_attacks: false
+  attack_intensity: medium
+  attack_schedule: null
+  coordination_rate: 0.0
+  enabled: false
+client_population:
+  coordination_enabled: false
+  coordination_groups: 2
+  dropout_probability: 0.05
+  honest_fraction: 1.0
+  malicious_types: null
+  participation_rate: 1.0
+  total_clients: 100
+data_distribution:
+  distribution_type: iid
+  heterogeneity_alpha: 0.5
+  max_samples_per_client: 2000
+  min_samples_per_client: 100
+  noise_clients_fraction: 0.1
+  num_classes: 10
+  quality_variation: false
+  samples_per_client: 500
+description: Benchmark simulation performance with various client counts
+environment_overrides:
+  AGGREGATION_METHOD: fedavg
+  UPDATE_THRESHOLD: '100'
+expected_outcomes:
+  max_avg_round_duration: 5.0
+  min_throughput: 50.0
+name: performance_benchmark
+total_rounds: 20

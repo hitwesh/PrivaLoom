@@ -8,7 +8,7 @@ Provides backward compatibility with existing code patterns.
 # Core utilities and backward compatibility
 from utils.config import config, _get_env_bool, _get_env_float, _get_env_int
 from utils.logging import (
-    setup_logger, log_info, log_error, log_training_step,
+    setup_logger, log_info, log_error, log_warning, log_training_step,
     log_update_received, log_aggregation_event, log_aggregation_start, log_aggregation_complete
 )
 from utils.data import (
@@ -32,7 +32,7 @@ __all__ = [
     'config', '_get_env_bool', '_get_env_float', '_get_env_int',
 
     # Logging
-    'setup_logger', 'log_info', 'log_error', 'log_training_step',
+    'setup_logger', 'log_info', 'log_error', 'log_warning', 'log_training_step',
     'log_update_received', 'log_aggregation_event', 'log_aggregation_start', 'log_aggregation_complete',
 
     # Data processing

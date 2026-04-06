@@ -1,0 +1,33 @@
+attack_config:
+  adaptive_attacks: false
+  attack_intensity: low
+  attack_schedule: null
+  coordination_rate: 0.0
+  enabled: true
+client_population:
+  coordination_enabled: false
+  coordination_groups: 2
+  dropout_probability: 0.05
+  honest_fraction: 0.85
+  malicious_types:
+    gradient_noise: 0.15
+  participation_rate: 0.75
+  total_clients: 40
+data_distribution:
+  distribution_type: non_iid
+  heterogeneity_alpha: 0.1
+  max_samples_per_client: 2000
+  min_samples_per_client: 100
+  noise_clients_fraction: 0.2
+  num_classes: 10
+  quality_variation: true
+  samples_per_client: 800
+description: Test federated learning with realistic non-IID data distribution
+environment_overrides:
+  AGGREGATION_METHOD: trimmed_mean
+  OUTLIER_DETECTION_ENABLED: 'true'
+expected_outcomes:
+  max_convergence_rounds: 70
+  min_final_accuracy: 0.55
+name: non_iid_heterogeneity
+total_rounds: 75

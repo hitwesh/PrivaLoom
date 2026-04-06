@@ -6,33 +6,40 @@
 - Thoroughly explain about your features and changes committed.
 - Always add changes on the top of previous changes, do not break this.
 
+## Fixed Setup and Simulation CLI Runtime Issues
+
+- Timestamp: 2026-04-07, 01:03pm
+- Author: Hitesh
+- Description: Fixed setup/runtime blockers by updating dependency pins, repairing server/CLI import and typing issues, and hardening model paths to avoid duplicate artifact creation from subfolders.
+
 ## Implemented Complete Multi-Client Simulation System
 
-- Timestamp: 2026-04-07, 00:15
+- Timestamp: 2026-04-07, 12:15am
 - Author: Tiyasa
 - Description: Successfully implemented comprehensive multi-client simulation system with 5 core components: (1) SimulationOrchestrator for coordinating 500+ concurrent clients using FastAPI TestClient pattern with thread-safe execution, (2) ClientFactory supporting 7 client types including honest, gradient_scaling/sign_flipping Byzantine attacks, coordinated_malicious, dropout_prone, and free_rider behaviors, (3) ScenarioEngine with YAML-based configuration supporting 10 predefined scenarios (basic_federated_learning, byzantine_robustness_test, large_scale_simulation, coordinated_attack_simulation, etc.), (4) MetricsCollector providing real-time convergence analysis, security monitoring, and performance metrics with export capabilities, (5) DataDistributor supporting IID, Non-IID, and pathological data distribution patterns. Added CLI interface with run/list/describe/create/benchmark/analyze commands. Enhanced server API with simulation mode detection and /simulation/metrics endpoint. Created comprehensive test suite with 25+ integration tests covering Byzantine robustness, performance, scalability, client behaviors, and error handling. Includes example usage script and complete documentation. Full backward compatibility maintained with existing Phase 1+2 infrastructure. System can now validate Byzantine robustness at scale, demonstrate federated learning convergence, and serve as research platform for FL algorithm development. Added psutil dependency for system monitoring. Files created: simulation/__init__.py, orchestrator.py, client_factory.py, data_distribution.py, metrics.py, scenarios.py, cli.py, 4 YAML scenario files, comprehensive integration tests, and example demo script.
 
+
 ## Reorganized Privacy and Security into Unified Module
 
-- Timestamp: 2026-04-06, 20:45
+- Timestamp: 2026-04-06, 08:45pm
 - Author: Samik
 - Description: Consolidated privacy and security components into a single unified `privacy_security/` directory to reduce directory clutter and improve organization. Moved all files from separate `privacy/` and `security/` directories into `privacy_security/`. Updated all imports across client code, tests, and documentation. Verified functionality with comprehensive test runs - all 50+ tests still pass. This change improves code organization and sets up clean structure for upcoming Phase 2 Byzantine-robust aggregation features. No functional changes, purely organizational restructuring for better maintainability.
 
 ## Added Formal Differential Privacy & Testing Infrastructure
 
-- Timestamp: 2026-04-06, 20:30
+- Timestamp: 2026-04-06, 08:30pm
 - Author: Samik
 - Description: Implemented Phase 1 of the Privacy & Security Layer feature. Added formal (ε, δ)-differential privacy using Opacus library with RDP (Rényi Differential Privacy) accounting for precise privacy loss tracking. Created privacy/ module with DPEngine (privacy accountant, gradient clipper, noise generator) and PrivacyTracker for persistent budget management. Bootstrapped comprehensive pytest testing infrastructure with 45 passing tests covering DP correctness, privacy accounting, composition theorems, and persistence. Added new dependencies: opacus==1.5.4, pytest==8.3.5, pytest-asyncio==0.25.2, pytest-mock==3.14.0. Extended utils/types.py with privacy-related type aliases (PrivacyBudget, DPParams, ClientID, ReputationScore). Added get_privacy_stats() method to RoundTracker for integration with privacy tracking. All tests pass with 100% coverage of privacy module. Next: Phase 2 (Byzantine-robust aggregation) and client integration for formal DP.
 
 ## Added Automatic Periodic Retraining with 20-Update Threshold
 
-- Timestamp: 2026-04-06, 15:15
+- Timestamp: 2026-04-06, 03:15pm
 - Author: Samik
 - Description: Implemented automatic server-side model retraining that triggers when 20 client updates are accumulated. Changed aggregation threshold from 2 to 20 updates, added thread-safe update buffering with threading.Lock, implemented persistent round tracking with JSON state storage, added enhanced structured logging for aggregation events with performance metrics, and created configurable UPDATE_THRESHOLD environment variable. Includes new /status endpoint for monitoring aggregation progress and round statistics.
 
 ## Added Utilities Module with Structured Logging and Configuration Management
 
-- Timestamp: 2026-04-06, 14:30
+- Timestamp: 2026-04-06, 02:30pm
 - Author: Samik
 - Description: Implemented centralized utils/ module with structured JSON logging, environment-based configuration management, data preprocessing utilities, and validation functions. Replaced print() statements in client and server with JSON logging, added backward compatibility for existing environment helper functions, and enhanced data loading with validation. All utilities include comprehensive type hints and maintain existing behavior patterns.
 

@@ -1,7 +1,9 @@
 from transformers import AutoModelForCausalLM, AutoTokenizer
+from pathlib import Path
 
 MODEL_NAME = "distilgpt2"
-MODEL_PATH = "./model"
+MODEL_DIR = Path(__file__).resolve().parent
+MODEL_PATH = str(MODEL_DIR)
 
 
 def download_and_save_model() -> None:
@@ -14,4 +16,4 @@ def download_and_save_model() -> None:
 
 if __name__ == "__main__":
     download_and_save_model()
-    print("Model saved to ./model")
+    print(f"Model saved to {MODEL_PATH}")

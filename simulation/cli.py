@@ -48,10 +48,10 @@ def simulation(ctx, verbose, config_file):
               help='Fraction of malicious clients (overrides scenario)')
 @click.option('--output', '-o', help='Output file for results (JSON)')
 @click.option('--aggregation-method', default=None,
-              choices=['fedavg', 'trimmed_mean', 'median', 'krum', 'bulyan'],
+              type=click.Choice(['fedavg', 'trimmed_mean', 'median', 'krum', 'bulyan']),
               help='Aggregation method (overrides scenario)')
 @click.option('--data-distribution', default=None,
-              choices=['iid', 'non_iid', 'pathological'],
+              type=click.Choice(['iid', 'non_iid', 'pathological']),
               help='Data distribution type (overrides scenario)')
 @click.option('--isolated/--no-isolated', default=True,
               help='Use isolated simulation state (default: True)')

@@ -1,0 +1,41 @@
+attack_config:
+  adaptive_attacks: true
+  attack_intensity: medium
+  attack_schedule:
+    0: dormant
+    20: scaling_attack
+    40: sign_flip_attack
+    60: noise_attack
+    80: coordinated_burst
+  coordination_rate: 0.6
+  enabled: true
+client_population:
+  coordination_enabled: true
+  coordination_groups: 2
+  dropout_probability: 0.05
+  honest_fraction: 0.75
+  malicious_types:
+    coordinated_malicious: 0.1
+    gradient_scaling: 0.15
+  participation_rate: 0.8
+  total_clients: 35
+data_distribution:
+  distribution_type: non_iid
+  heterogeneity_alpha: 0.3
+  max_samples_per_client: 2000
+  min_samples_per_client: 100
+  noise_clients_fraction: 0.1
+  num_classes: 10
+  quality_variation: true
+  samples_per_client: 900
+description: Test against adaptive attacks that change strategy
+environment_overrides:
+  AGGREGATION_METHOD: trimmed_mean
+  BYZANTINE_TOLERANCE: '0.25'
+  OUTLIER_DETECTION_ENABLED: 'true'
+  REPUTATION_ENABLED: 'true'
+expected_outcomes:
+  adaptation_detection_rate: 0.8
+  min_final_accuracy: 0.45
+name: adaptive_attack_test
+total_rounds: 90

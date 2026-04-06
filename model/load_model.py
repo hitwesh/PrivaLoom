@@ -1,13 +1,14 @@
-import os
+from pathlib import Path
 
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 MODEL_NAME = "distilgpt2"
-MODEL_PATH = "./model"
+MODEL_DIR = Path(__file__).resolve().parent
+MODEL_PATH = str(MODEL_DIR)
 
 
 def _get_model_source() -> str:
-    if os.path.isfile(os.path.join(MODEL_PATH, "config.json")):
+    if (MODEL_DIR / "config.json").is_file():
         return MODEL_PATH
     return MODEL_NAME
 
@@ -17,7 +18,7 @@ tokenizer = AutoTokenizer.from_pretrained(model_source, use_fast=False)
 model = AutoModelForCausalLM.from_pretrained(model_source)
 
 if model_source == MODEL_NAME:
-    os.makedirs(MODEL_PATH, exist_ok=True)
+    MODEL_DIR.mkdir(parents=True, exist_ok=True)
     model.save_pretrained(MODEL_PATH)
     tokenizer.save_pretrained(MODEL_PATH)
 

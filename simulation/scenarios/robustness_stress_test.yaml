@@ -1,0 +1,36 @@
+attack_config:
+  adaptive_attacks: true
+  attack_intensity: high
+  attack_schedule: null
+  coordination_rate: 0.9
+  enabled: true
+client_population:
+  coordination_enabled: true
+  coordination_groups: 2
+  dropout_probability: 0.05
+  honest_fraction: 0.5
+  malicious_types:
+    gradient_noise: 0.1
+    gradient_scaling: 0.2
+    sign_flipping: 0.2
+  participation_rate: 0.9
+  total_clients: 30
+data_distribution:
+  distribution_type: pathological
+  heterogeneity_alpha: 0.05
+  max_samples_per_client: 2000
+  min_samples_per_client: 100
+  noise_clients_fraction: 0.4
+  num_classes: 10
+  quality_variation: true
+  samples_per_client: 400
+description: Stress test with maximum Byzantine fraction and attacks
+environment_overrides:
+  AGGREGATION_METHOD: bulyan
+  BYZANTINE_TOLERANCE: '0.5'
+  OUTLIER_DETECTION_ENABLED: 'true'
+  REPUTATION_ENABLED: 'true'
+expected_outcomes:
+  min_final_accuracy: 0.2
+name: robustness_stress_test
+total_rounds: 60

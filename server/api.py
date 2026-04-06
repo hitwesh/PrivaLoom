@@ -3,7 +3,7 @@ import time
 import torch
 from fastapi import FastAPI
 from pydantic import BaseModel
-from typing import Optional
+from typing import Any, Optional
 
 from model.load_model import generate_response, model
 from utils import (
@@ -27,7 +27,7 @@ app = FastAPI()
 logger = setup_logger("privaloom.server")
 
 # Thread-safe update buffer and configuration
-global_updates: list[dict[str, any]] = []  # Now stores update dict with metadata
+global_updates: list[dict[str, Any]] = []  # Now stores update dict with metadata
 update_buffer_lock = threading.Lock()
 
 # Configurable threshold (defaults to 20, backward compatible)
@@ -138,7 +138,7 @@ def get_status() -> dict:
 
 
 @app.get("/simulation/metrics")
-def get_simulation_metrics() -> dict[str, any]:
+def get_simulation_metrics() -> dict[str, Any]:
     """Get real-time simulation metrics for monitoring."""
     from fastapi import HTTPException
 

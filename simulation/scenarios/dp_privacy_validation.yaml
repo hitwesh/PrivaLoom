@@ -1,0 +1,36 @@
+attack_config:
+  adaptive_attacks: false
+  attack_intensity: medium
+  attack_schedule: null
+  coordination_rate: 0.0
+  enabled: false
+client_population:
+  coordination_enabled: false
+  coordination_groups: 2
+  dropout_probability: 0.05
+  honest_fraction: 0.9
+  malicious_types:
+    gradient_noise: 0.1
+  participation_rate: 0.7
+  total_clients: 30
+data_distribution:
+  distribution_type: iid
+  heterogeneity_alpha: 0.5
+  max_samples_per_client: 2000
+  min_samples_per_client: 100
+  noise_clients_fraction: 0.1
+  num_classes: 10
+  quality_variation: false
+  samples_per_client: 1200
+description: Test differential privacy mechanisms and budget consumption
+environment_overrides:
+  AGGREGATION_METHOD: fedavg
+  DP_DELTA: 1e-5
+  DP_ENABLED: 'true'
+  DP_EPSILON: '8.0'
+  DP_MAX_GRAD_NORM: '1.0'
+expected_outcomes:
+  min_final_accuracy: 0.6
+  privacy_budget_consumed: 8.0
+name: dp_privacy_validation
+total_rounds: 100
