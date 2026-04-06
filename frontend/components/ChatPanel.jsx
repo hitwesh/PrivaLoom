@@ -1,8 +1,15 @@
 import { useState } from "react";
 
+const defaultMessages = [
+  {
+    role: "assistant",
+    text: "Workspace is live. Share a prompt to test your local model while keeping all context private.",
+  },
+];
+
 export default function ChatPanel() {
   const [message, setMessage] = useState("");
-  const [history, setHistory] = useState([]);
+  const [history, setHistory] = useState(defaultMessages);
 
   const sendMessage = () => {
     const trimmed = message.trim();
@@ -10,32 +17,61 @@ export default function ChatPanel() {
       return;
     }
 
-    setHistory((prev) => [...prev, `You: ${trimmed}`]);
+    setHistory((prev) => [
+      ...prev,
+      { role: "user", text: trimmed },
+      {
+        role: "assistant",
+        text: "Received. In a full integration, this message would be processed by your local model endpoint.",
+      },
+    ]);
     setMessage("");
   };
 
+  const handleKeyDown = (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      sendMessage();
+    }
+  };
+
   return (
-    <div className="bottom-section">
-      <section className="card">
-        <h3>Chat Panel</h3>
+    <section className="chat-shell card-surface">
+      <header className="chat-head">
         <div>
-          <input
-            type="text"
-            value={message}
-            onChange={(event) => setMessage(event.target.value)}
-            placeholder="Ask a question about your local model"
-          />
-          <button type="button" onClick={sendMessage}>
-            Send
-          </button>
+          <p className="chat-label">PrivaLoom Chat</p>
+          <h2>Local Model Conversation</h2>
         </div>
-        <ul>
-          {history.length === 0 ? <li>No messages yet</li> : null}
-          {history.map((item, index) => (
-            <li key={`${item}-${index}`}>{item}</li>
-          ))}
-        </ul>
-      </section>
-    </div>
+        <span className="chat-status">
+          <span className="status-dot" />
+          Private session
+        </span>
+      </header>
+
+      <div className="chat-scroll">
+        {history.map((item, index) => (
+          <article key={`${item.role}-${index}`} className={`message message-${item.role}`}>
+            <small className="message-role">
+              {item.role === "assistant" ? "Assistant" : "You"}
+            </small>
+            <p>{item.text}</p>
+          </article>
+        ))}
+      </div>
+
+      <div className="chat-input-row">
+        <input
+          className="chat-input"
+          type="text"
+          value={message}
+          onChange={(event) => setMessage(event.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Message your local model..."
+        />
+        <button className="chat-send-btn" type="button" onClick={sendMessage}>
+          Send
+        </button>
+      </div>
+    </section>
   );
 }

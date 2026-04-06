@@ -9,10 +9,22 @@ export default function UploadPanel() {
   };
 
   return (
-    <section className="card">
-      <h3>Upload Dataset</h3>
-      <input type="file" onChange={handleFileChange} />
-      <p>{fileName ? `Selected: ${fileName}` : "No file selected"}</p>
+    <section className="panel card-surface">
+      <div className="panel-head">
+        <h3>Dataset Intake</h3>
+        <span className="panel-kicker">Secure</span>
+      </div>
+
+      <label className="file-picker">
+        <span>{fileName ? "Replace dataset file" : "Select dataset file"}</span>
+        <input type="file" onChange={handleFileChange} />
+      </label>
+
+      <p className="muted-text">
+        {fileName
+          ? `Selected file: ${fileName}`
+          : "CSV, JSONL, or TXT files are accepted for local training."}
+      </p>
     </section>
   );
 }
