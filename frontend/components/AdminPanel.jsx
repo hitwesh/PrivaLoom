@@ -55,6 +55,19 @@ const formatSyncAge = (lastTelemetrySyncAt) => {
   return `${ageMinutes}m ago`;
 };
 
+const shortenLabel = (value, maxLength = 22) => {
+  const text = String(value || "-");
+  if (text.length <= maxLength) {
+    return text;
+  }
+  return `${text.slice(0, maxLength - 1)}...`;
+};
+
+const formatScenarioLabel = (scenario) =>
+  String(scenario || "")
+    .toLowerCase()
+    .replace(/[_-]+/g, " ");
+
 export default function AdminPanel({
   accountName,
   clientWorkspace,
@@ -266,7 +279,7 @@ export default function AdminPanel({
               <tbody>
                 {userRows.map((entry) => (
                   <tr key={entry.name}>
-                    <td>{entry.name}</td>
+                    <td title={entry.name}>{shortenLabel(entry.name, 28)}</td>
                     <td>{entry.updateCount}</td>
                     <td>{entry.lastSync}</td>
                     <td>
@@ -296,7 +309,7 @@ export default function AdminPanel({
                     style={{ height: `${Math.round((entry.updateCount / maxBarValue) * 100)}%` }}
                   />
                 </div>
-                <p>{entry.name}</p>
+                <p title={entry.name}>{shortenLabel(entry.name, 16)}</p>
                 <span>{entry.updateCount} updates</span>
               </article>
             ))}
@@ -467,8 +480,8 @@ export default function AdminPanel({
           {scenarioNames.length ? (
             <div className="admin-scenario-list">
               {scenarioNames.slice(0, 6).map((scenario) => (
-                <span key={scenario} className="admin-status-chip healthy">
-                  {scenario}
+                <span key={scenario} className="admin-status-chip healthy" title={scenario}>
+                  {shortenLabel(formatScenarioLabel(scenario), 26)}
                 </span>
               ))}
             </div>

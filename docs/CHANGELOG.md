@@ -6,6 +6,12 @@
 - Thoroughly explain about your features and changes committed.
 - Always add changes on the top of previous changes, do not break this.
 
+## Improved Admin Text Layout and Overflow Handling
+
+- Timestamp: 2026-04-07, 02:06am
+- Author: Hitesh
+- Description: Fixed long-text overflow in admin cards by tightening wrapping/truncation styles and formatting long user/scenario labels so content stays inside boxes and looks clean.
+
 ## Improved Sync Visibility and Upload Reliability
 
 - Timestamp: 2026-04-07, 02:02am

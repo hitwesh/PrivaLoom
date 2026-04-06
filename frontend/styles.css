@@ -1510,6 +1510,7 @@ body {
   border-radius: 16px;
   background: linear-gradient(180deg, #1a1c1f, #121316);
   padding: 14px;
+  min-width: 0;
 }
 
 .admin-card-head {
@@ -1524,6 +1525,8 @@ body {
   margin: 0;
   color: var(--white);
   font-size: 15px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .admin-card-head span {
@@ -1532,6 +1535,9 @@ body {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   font-weight: 700;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
 }
 
 .admin-table-wrap {
@@ -1542,6 +1548,7 @@ body {
   width: 100%;
   border-collapse: collapse;
   min-width: 420px;
+  table-layout: fixed;
 }
 
 .admin-table th,
@@ -1561,6 +1568,7 @@ body {
 
 .admin-table td {
   color: var(--text-main);
+  overflow-wrap: anywhere;
 }
 
 .admin-status-chip {
@@ -1568,13 +1576,17 @@ body {
   align-items: center;
   justify-content: center;
   min-width: 70px;
-  height: 24px;
+  min-height: 24px;
+  height: auto;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.18);
+  padding: 3px 10px;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+  max-width: 100%;
+  line-height: 1.2;
 }
 
 .admin-status-chip.live,
@@ -1599,6 +1611,7 @@ body {
   display: grid;
   gap: 7px;
   justify-items: center;
+  min-width: 0;
 }
 
 .admin-bar-track {
@@ -1622,9 +1635,11 @@ body {
   margin: 0;
   color: var(--text-main);
   font-size: 11px;
-  max-width: 110px;
+  max-width: 100%;
   text-align: center;
-  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .admin-bar-card span {
@@ -1798,15 +1813,23 @@ body {
 .admin-meta-list p {
   margin: 0;
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
   color: var(--text-soft);
   font-size: 13px;
 }
 
+.admin-meta-list p span,
+.admin-meta-list p strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .admin-meta-list p strong {
   color: var(--white);
   font-size: 13px;
+  text-align: right;
 }
 
 .admin-feedback {
@@ -1818,6 +1841,7 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.04);
+  overflow-wrap: anywhere;
 }
 
 .admin-scenario-list {
@@ -1825,6 +1849,15 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.admin-scenario-list .admin-status-chip {
+  max-width: 100%;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.25;
 }
 
 .chat-shell {
