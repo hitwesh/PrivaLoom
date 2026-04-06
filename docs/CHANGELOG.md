@@ -6,6 +6,11 @@
 - Thoroughly explain about your features and changes committed.
 - Always add changes on the top of previous changes, do not break this.
 
+## Fixed frontend Vite entry path and missing dashboard components
+- Timestamp: 2026-04-06, 07:44pm
+- Author: Copilot
+- Description: Fixed frontend startup by updating index module path from /src/main.jsx to /main.jsx and restored missing React dashboard components (UploadPanel, TrainingStatus, UpdateLog, ChatPanel, PrivacyBadge) required by App.jsx so Vite resolves imports correctly.
+
 ## Added React Frontend UI for SLM Training & Testing Dashboard
 - Timestamp: 2026-04-06, 01:56pm
 - Author: Riya
@@ -15,7 +20,7 @@
 
 - Timestamp: 2026-04-05, 12:51am
 - Author: Samik
-- Description Implemented client-side gradient clipping and Gaussian noise addition before slicing and sending update payloads to the server, with env-var configuration for noise scale and clipping norm.
+- Description: Implemented client-side gradient clipping and Gaussian noise addition before slicing and sending update payloads to the server, with env-var configuration for noise scale and clipping norm.
 
 ## Fixed one-time dataset training flag
 
