@@ -7,6 +7,27 @@ import PrivacyBadge from "./components/PrivacyBadge";
 import LandingPage from "./components/LandingPage";
 import AccessPortal from "./components/AccessPortal";
 
+const footerColumns = [
+  {
+    title: "Platform",
+    links: ["Private Chat Workspace", "Dataset Intake", "Training Status", "Update Log"],
+  },
+  {
+    title: "Privacy",
+    links: ["Local Processing", "Gradient Clipping", "Noise Controls", "Trust Boundaries"],
+  },
+  {
+    title: "Architecture",
+    links: ["Client Node", "FastAPI Server", "Aggregation Flow", "Selective Updates"],
+  },
+  {
+    title: "Resources",
+    links: ["Project Bible", "Architecture Notes", "Roadmap", "Changelog"],
+  },
+];
+
+const socialChannels = ["X", "GitHub", "LinkedIn", "Discord"];
+
 export default function App() {
   const stageLabels = {
     landing: "Public Landing",
@@ -94,18 +115,14 @@ export default function App() {
   return (
     <div className="site-root">
       <header className="site-header">
-        <div className="site-header-inner card-surface">
+        <div className="site-header-inner">
           <button
-            className="brand-signature"
+            className="brand-wordmark"
             type="button"
             onClick={() => setStage("landing")}
             aria-label="Go to landing page"
           >
-            <span className="brand-core">
-              <span className="brand-mark" />
-              <span className="brand-name">Priva Loom</span>
-            </span>
-            <span className="brand-tag">Local AI Training Platform</span>
+            PrivaLoom
           </button>
 
           <nav className="site-nav" aria-label="Primary navigation">
@@ -114,7 +131,10 @@ export default function App() {
               type="button"
               onClick={() => setStage("landing")}
             >
-              Home
+              Research
+            </button>
+            <button className="site-nav-item" type="button" onClick={() => setStage("landing")}>
+              Architecture
             </button>
             <button
               className={`site-nav-item ${stage === "access" ? "is-active" : ""}`}
@@ -138,9 +158,25 @@ export default function App() {
             </button>
           </nav>
 
-          <div className="site-stage-badge">
-            <span className="header-status-dot" />
-            <span>{stageLabels[stage]}</span>
+          <div className="site-header-actions">
+            <span className="header-stage">{stageLabels[stage]}</span>
+            <button className="header-login" type="button" onClick={() => setStage("access")}>
+              Log in
+            </button>
+            <button
+              className="header-cta"
+              type="button"
+              onClick={() => {
+                if (canOpenWorkspace) {
+                  setStage("workspace");
+                  return;
+                }
+
+                setStage("access");
+              }}
+            >
+              Try Workspace
+            </button>
           </div>
         </div>
       </header>
@@ -148,12 +184,45 @@ export default function App() {
       <main className="site-main">{renderStage()}</main>
 
       <footer className="site-footer">
-        <div className="site-footer-inner card-surface">
-          <p className="footer-brand">Priva Loom</p>
-          <p className="footer-copy">
-            Multi-client local model training, private updates, and secure chat workflow.
-          </p>
-          <p className="footer-meta">Demo Mode</p>
+        <div className="site-footer-inner">
+          <div className="footer-grid">
+            <section className="footer-column footer-brand-column">
+              <p className="footer-brand">PrivaLoom</p>
+              <p className="footer-description">
+                A privacy-first distributed learning framework where local intelligence improves a
+                shared model through compact update signals.
+              </p>
+            </section>
+
+            {footerColumns.map((column) => (
+              <section key={column.title} className="footer-column">
+                <p className="footer-column-title">{column.title}</p>
+                <ul className="footer-link-list">
+                  {column.links.map((link) => (
+                    <li key={link}>
+                      <button className="footer-link-btn" type="button">
+                        {link}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </div>
+
+          <div className="footer-bottom">
+            <div className="footer-socials" aria-label="Social channels">
+              {socialChannels.map((channel) => (
+                <button key={channel} className="footer-social-btn" type="button">
+                  {channel}
+                </button>
+              ))}
+            </div>
+            <p className="footer-legal">PrivaLoom (c) 2026. Privacy-aware training by design.</p>
+            <button className="footer-locale" type="button">
+              English | Global
+            </button>
+          </div>
         </div>
       </footer>
     </div>

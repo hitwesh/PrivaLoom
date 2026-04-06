@@ -6,6 +6,11 @@
 - Thoroughly explain about your features and changes committed.
 - Always add changes on the top of previous changes, do not break this.
 
+## Added OpenAI-inspired navigation, explanatory project body, and structured footer
+- Timestamp: 2026-04-06, 09:55pm
+- Author: Hitesh
+- Description: Reworked the global site shell to a cleaner OpenAI-inspired layout by introducing a minimal sticky header with professional navigation/actions, expanded the landing page with a detailed architecture-driven middle body section that explains PrivaLoom (privacy model, learning flow, implementation reality, and roadmap direction), and replaced the compact footer with a full multi-column information footer for platform, privacy, architecture, and resources. Updated responsive behavior for desktop/tablet/mobile to keep hierarchy, readability, and spacing consistent across all breakpoints.
+
 ## Added premium landing flow with dummy multi-client access gateway
 - Timestamp: 2026-04-06, 08:19pm
 - Author: Hitesh
