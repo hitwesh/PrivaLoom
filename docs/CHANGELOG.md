@@ -6,6 +6,12 @@
 - Thoroughly explain about your features and changes committed.
 - Always add changes on the top of previous changes, do not break this.
 
+## Added Differential Privacy (DP) Client Gradient Noise/Clipping
+
+- Timestamp: 2026-04-05, 12:51am
+- Author: Samik
+- Description Implemented client-side gradient clipping and Gaussian noise addition before slicing and sending update payloads to the server, with env-var configuration for noise scale and clipping norm.
+
 ## Fixed one-time dataset training flag
 
 - Timestamp: 2026-04-04, 07:23pm
@@ -119,9 +125,3 @@
 - Timestamp: 2026-04-03, 03:00pm
 - Author: Hitesh
 - Description: Added PROJECT_BIBLE.md with the core project description.
-
-## Added Differential Privacy (DP) Client Gradient Noise/Clipping
-
-- Timestamp: 2026-04-05, 12:51am
-- Author: Samik
-- Description Implemented client-side gradient clipping and Gaussian noise addition before slicing and sending update payloads to the server, with env-var configuration for noise scale and clipping norm.
