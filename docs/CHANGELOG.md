@@ -6,6 +6,11 @@
 - Thoroughly explain about your features and changes committed.
 - Always add changes on the top of previous changes, do not break this.
 
+## Renamed browser tab title to PrivaLoom
+- Timestamp: 2026-04-06, 11:35pm
+- Author: Hitesh
+- Description: Updated the frontend document title from SLM Trainer to PrivaLoom.
+
 ## Upgraded dataset intake with multi-file selection and send updates
 - Timestamp: 2026-04-06, 11:30pm
 - Author: Hitesh
