@@ -6,9 +6,15 @@
 - Thoroughly explain about your features and changes committed.
 - Always add changes on the top of previous changes, do not break this.
 
+## Added Frontend Interface
+
+- Timestamp: 2026-04-07, 01:08am
+- Author: Hitesh
+- Description: Added the frontend layer for PrivaLoom to provide a user-facing interface and improve usability.
+
 ## Fixed Setup and Simulation CLI Runtime Issues
 
-- Timestamp: 2026-04-07, 01:03pm
+- Timestamp: 2026-04-07, 01:03am
 - Author: Hitesh
 - Description: Fixed setup/runtime blockers by updating dependency pins, repairing server/CLI import and typing issues, and hardening model paths to avoid duplicate artifact creation from subfolders.
 
