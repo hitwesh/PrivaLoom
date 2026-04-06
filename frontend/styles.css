@@ -1038,6 +1038,209 @@ body {
   opacity: 0;
 }
 
+.upload-controls {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.upload-manage-btn {
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid #50535c;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-main);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0 11px;
+  cursor: pointer;
+  transition: border-color 160ms ease, transform 160ms ease;
+}
+
+.upload-manage-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: #6a6e78;
+}
+
+.upload-manage-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.upload-summary {
+  color: var(--text-subtle);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.dataset-tab {
+  margin-top: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #1a1b1e, #131417);
+  padding: 12px;
+}
+
+.dataset-tab-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.dataset-tab-head p {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.dataset-tab-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.dataset-tab-actions button {
+  border: none;
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 160ms ease;
+}
+
+.dataset-tab-actions button:hover {
+  color: var(--white);
+}
+
+.dataset-file-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.dataset-file-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 9px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.dataset-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.dataset-check input {
+  accent-color: #d9dce2;
+}
+
+.dataset-check span {
+  color: var(--text-subtle);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dataset-file-link {
+  border: none;
+  background: transparent;
+  color: var(--text-main);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dataset-file-link:hover {
+  text-decoration: underline;
+}
+
+.dataset-file-size {
+  color: var(--text-subtle);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.dataset-remove-btn {
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid #4f525b;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-soft);
+  font-size: 12px;
+  padding: 0 10px;
+  cursor: pointer;
+  transition: border-color 160ms ease, color 160ms ease;
+}
+
+.dataset-remove-btn:hover {
+  border-color: #6a6e78;
+  color: var(--white);
+}
+
+.upload-send-row {
+  margin-top: 12px;
+}
+
+.send-update-btn {
+  width: 100%;
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid #bcc0c8;
+  background: linear-gradient(180deg, #ffffff, #dcdee3);
+  color: #0b0c0e;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: transform 160ms ease, filter 160ms ease;
+}
+
+.send-update-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(0.97);
+}
+
+.send-update-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.upload-feedback {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.upload-feedback.success {
+  color: #d5d8df;
+}
+
+.upload-feedback.error {
+  color: #f0b4b4;
+}
+
 .muted-text {
   margin: 12px 0 0;
   color: var(--text-soft);
@@ -1541,6 +1744,29 @@ body {
 
   .panel {
     padding: 16px;
+  }
+
+  .upload-controls {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .dataset-tab-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .dataset-tab-actions {
+    flex-wrap: wrap;
+  }
+
+  .dataset-file-row {
+    grid-template-columns: 1fr;
+    align-items: flex-start;
+  }
+
+  .dataset-remove-btn {
+    width: 100%;
   }
 
   .chat-head {

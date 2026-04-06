@@ -90,6 +90,16 @@ export default function App() {
     appendActivity("Learning signal generation triggered from latest interaction.", "Update");
   };
 
+  const handleSendDatasetUpdates = async ({ files }) => {
+    if (!files?.length) {
+      return;
+    }
+
+    const label = files.length === 1 ? files[0].fileName : `${files.length} files`;
+    appendActivity(`Update package sent with ${label}.`, "Dispatch");
+    appendActivity("Dataset payload forwarded for processing.", "Processing");
+  };
+
   const renderStage = () => {
     if (stage === "landing") {
       return <LandingPage onStart={() => setStage("access")} />;
@@ -140,7 +150,10 @@ export default function App() {
           </section>
 
           <div className="sidebar-stack">
-            <UploadPanel onDocumentChange={handleDocumentChange} />
+            <UploadPanel
+              onDocumentChange={handleDocumentChange}
+              onSendUpdates={handleSendDatasetUpdates}
+            />
             <TrainingStatus />
             <UpdateLog updates={activityLog} />
           </div>

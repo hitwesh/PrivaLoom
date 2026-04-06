@@ -6,6 +6,11 @@
 - Thoroughly explain about your features and changes committed.
 - Always add changes on the top of previous changes, do not break this.
 
+## Upgraded dataset intake with multi-file selection and send updates
+- Timestamp: 2026-04-06, 11:30pm
+- Author: Hitesh
+- Description: Added multi-file upload, manual select/deselect controls, in-browser file preview on click, and a Send updates button that forwards selected files into the processing flow.
+
 ## Split Architecture page, refined access copy, and workspace-aware CTA
 - Timestamp: 2026-04-06, 10:25pm
 - Author: Hitesh
