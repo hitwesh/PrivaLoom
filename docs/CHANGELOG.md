@@ -6,6 +6,42 @@
 - Thoroughly explain about your features and changes committed.
 - Always add changes on the top of previous changes, do not break this.
 
+## Repositioned Rail CTA and Replaced Loading Bars
+
+- Timestamp: 2026-04-07, 03:30am
+- Author: Hitesh
+- Description: Moved the Open Workspace button into the Operations Rail card and replaced the three loading-like lines with compact status pills for a cleaner research-side layout.
+
+## Added Research Right-Rail Fill Design
+
+- Timestamp: 2026-04-07, 03:25am
+- Author: Hitesh
+- Description: Styled the new right-side research rail (operations panel, signal chips, progress bars, and side CTA) and added responsive behavior to remove remaining empty gaps.
+
+## Filled Research Layout Gaps
+
+- Timestamp: 2026-04-07, 03:20am
+- Author: Hitesh
+- Description: Re-arranged the research section so fact cards sit under the left text column and prevented stretched grid behavior, removing large empty vertical gaps without adding extra copy.
+
+## Refined Research Section Visual Hierarchy
+
+- Timestamp: 2026-04-07, 03:15am
+- Author: Hitesh
+- Description: Increased research heading/body typography and rearranged the lower cards into a denser two-column layout to reduce empty visual space while keeping content unchanged.
+
+## Improved Landing Panel Balance
+
+- Timestamp: 2026-04-07, 03:13am
+- Author: Hitesh
+- Description: Added a compact Research Snapshot block below the three landing metric pills to reduce empty space and improve visual balance while keeping the design minimal.
+
+## Refreshed Research and Architecture Pages
+
+- Timestamp: 2026-04-07, 03:06am
+- Author: Hitesh
+- Description: Updated Landing and Architecture page content to reflect current auth/RBAC and operations scope, and refined the Landing research layout for a cleaner, more professional minimal presentation.
+
 ## Fixed Authenticated Update Client-ID Mismatch
 
 - Timestamp: 2026-04-07, 03:00am
