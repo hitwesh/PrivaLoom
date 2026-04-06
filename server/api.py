@@ -1,7 +1,9 @@
 import threading
 import time
 import secrets
+import json
 from datetime import datetime
+from pathlib import Path
 import torch
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,16 +14,16 @@ from model.load_model import generate_response, model
 from utils import (
     setup_logger, log_info, log_error, log_warning,
     log_update_received, log_aggregation_start, log_aggregation_complete,
-    config, get_round_tracker
+    config, reset_round_tracker
 )
 
 # Import Phase 2 security components
 from privacy_security import (
     AggregatorFactory, AggregationMethod, AggregationConfig,
     OutlierDetector, OutlierDetectionMethod,
-    get_reputation_manager, calculate_quality_score, ClientReputation,
-    get_security_monitor, create_malicious_update_event, create_outlier_event,
-    create_update_validator, ValidationError, get_privacy_tracker
+    reset_reputation_manager, calculate_quality_score, ClientReputation,
+    reset_security_monitor, create_malicious_update_event, create_outlier_event,
+    create_update_validator, ValidationError, reset_privacy_tracker
 )
 from server.auth_db import (
     ROLE_ADMIN,
@@ -32,6 +34,7 @@ from server.auth_db import (
     delete_user,
     get_session_context,
     get_user_by_id,
+    get_user_by_username,
     get_user_count,
     init_auth_db,
     list_users,
@@ -67,8 +70,13 @@ update_buffer_lock = threading.Lock()
 # Configurable threshold (defaults to 20, backward compatible)
 UPDATE_THRESHOLD = config.get_int("UPDATE_THRESHOLD", 20)
 
-# Global round tracker for persistent state
-round_tracker = get_round_tracker()
+# Persistent state file configuration
+AGGREGATION_STATE_PATH = config.get_str("AGGREGATION_STATE_PATH", "data/aggregation_state.json")
+PRIVACY_STATE_PATH = config.get_str("PRIVACY_STATE_PATH", "data/privacy_state.json")
+REPUTATION_STATE_PATH = config.get_str("REPUTATION_STATE_PATH", "data/reputation_state.json")
+SECURITY_EVENTS_PATH = config.get_str("SECURITY_EVENTS_PATH", "data/security_events.jsonl")
+MODEL_PERSIST_ENABLED = config.get_bool("MODEL_PERSIST_ENABLED", True)
+MODEL_STATE_PATH = config.get_str("MODEL_STATE_PATH", "data/model_state.pt")
 
 # Phase 2: Byzantine-robust aggregation configuration
 AGGREGATION_METHOD = config.get_str("AGGREGATION_METHOD", "trimmed_mean")
@@ -86,6 +94,11 @@ AUTH_ENABLED = config.get_bool("AUTH_ENABLED", True)
 AUTH_DB_PATH = config.get_str("AUTH_DB_PATH", "data/auth.db")
 AUTH_BOOTSTRAP_ADMIN = config.get_str("AUTH_BOOTSTRAP_ADMIN", "admin")
 AUTH_BOOTSTRAP_PASSWORD = config.get_str("AUTH_BOOTSTRAP_PASSWORD", "admin123")
+AUTH_SEED_FILE = config.get_str("AUTH_SEED_FILE", "")
+
+# Global persistent trackers
+round_tracker = reset_round_tracker(AGGREGATION_STATE_PATH)
+privacy_tracker = reset_privacy_tracker(PRIVACY_STATE_PATH)
 
 try:
     init_auth_db(
@@ -106,8 +119,8 @@ try:
     aggregator_factory = AggregatorFactory()
 
     outlier_detector = OutlierDetector() if OUTLIER_DETECTION_ENABLED else None
-    reputation_manager = get_reputation_manager() if REPUTATION_ENABLED else None
-    security_monitor = get_security_monitor()
+    reputation_manager = reset_reputation_manager(REPUTATION_STATE_PATH) if REPUTATION_ENABLED else None
+    security_monitor = reset_security_monitor(log_file_path=SECURITY_EVENTS_PATH)
     update_validator = create_update_validator(
         enable_all_features=VALIDATION_ENABLED
     ) if VALIDATION_ENABLED else None
@@ -342,6 +355,109 @@ def _serialize_auth_context(context: dict[str, Any], token: str) -> dict[str, An
 
 def _create_temp_password() -> str:
     return f"Tmp-{secrets.token_urlsafe(9)}"
+
+
+def _load_model_state_if_available() -> None:
+    """Restore previously aggregated model state, if configured and present."""
+    if not MODEL_PERSIST_ENABLED:
+        return
+
+    state_path = Path(MODEL_STATE_PATH)
+    if not state_path.is_file():
+        return
+
+    try:
+        state_dict = torch.load(state_path, map_location="cpu")
+        model.load_state_dict(state_dict)
+        log_info(logger, "Loaded persisted model state", extra={"path": str(state_path)})
+    except Exception as e:
+        log_warning(logger, f"Failed to load persisted model state: {e}")
+
+
+def _save_model_state(round_num: int) -> None:
+    """Persist current model weights so subsequent runs and teammates can reuse training progress."""
+    if not MODEL_PERSIST_ENABLED:
+        return
+
+    state_path = Path(MODEL_STATE_PATH)
+    try:
+        state_path.parent.mkdir(parents=True, exist_ok=True)
+        temp_path = Path(f"{state_path}.tmp")
+        torch.save(model.state_dict(), temp_path)
+        temp_path.replace(state_path)
+        log_info(
+            logger,
+            "Persisted model state",
+            extra={"path": str(state_path), "round": round_num},
+        )
+    except Exception as e:
+        log_error(logger, f"Failed to persist model state: {e}")
+
+
+def _seed_users_from_file() -> None:
+    """Optionally create users from a JSON seed file for teammate onboarding."""
+    if not AUTH_ENABLED:
+        return
+    if not AUTH_SEED_FILE:
+        return
+
+    seed_path = Path(AUTH_SEED_FILE)
+    if not seed_path.is_file():
+        log_warning(logger, f"Auth seed file not found: {seed_path}")
+        return
+
+    try:
+        with seed_path.open("r", encoding="utf-8") as handle:
+            seed_entries = json.load(handle)
+    except Exception as e:
+        log_error(logger, f"Failed to read auth seed file: {e}")
+        return
+
+    if not isinstance(seed_entries, list):
+        log_warning(logger, "Auth seed file must contain a list of users")
+        return
+
+    created_count = 0
+    skipped_count = 0
+    invalid_count = 0
+
+    for entry in seed_entries:
+        if not isinstance(entry, dict):
+            invalid_count += 1
+            continue
+
+        username = str(entry.get("username", "")).strip()
+        password = str(entry.get("password", ""))
+        role = str(entry.get("role", ROLE_USER)).strip().lower()
+
+        if not username or not password or role not in {ROLE_ADMIN, ROLE_USER}:
+            invalid_count += 1
+            continue
+
+        if get_user_by_username(username):
+            skipped_count += 1
+            continue
+
+        try:
+            create_user(username, password, role)
+            created_count += 1
+        except Exception:
+            invalid_count += 1
+
+    log_info(
+        logger,
+        "Processed auth user seed file",
+        extra={
+            "path": str(seed_path),
+            "created": created_count,
+            "skipped": skipped_count,
+            "invalid": invalid_count,
+        },
+    )
+
+
+_load_model_state_if_available()
+_seed_users_from_file()
 
 
 def _get_reputation_clients(limit: int = 50) -> list[dict[str, Any]]:
@@ -775,7 +891,7 @@ def get_frontend_overview(authorization: Optional[str] = Header(default=None)) -
 
     privacy_payload: dict[str, Any] = {}
     try:
-        privacy_payload = get_privacy_tracker().get_cumulative_privacy()
+        privacy_payload = privacy_tracker.get_cumulative_privacy()
     except Exception as e:
         log_warning(logger, f"Failed to fetch privacy summary: {e}")
 
@@ -894,6 +1010,7 @@ def receive_update(
                 # Calculate duration and complete round
                 duration_ms = (time.time() - start_time) * 1000
                 round_tracker.complete_round(len(updates_to_aggregate), duration_ms)
+                _save_model_state(round_num)
 
                 log_aggregation_complete(logger, round_num, duration_ms,
                                        updates_processed=len(updates_to_aggregate),

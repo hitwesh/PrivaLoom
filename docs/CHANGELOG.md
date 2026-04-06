@@ -6,6 +6,12 @@
 - Thoroughly explain about your features and changes committed.
 - Always add changes on the top of previous changes, do not break this.
 
+## Added Persistent Runtime Handoff Support
+
+- Timestamp: 2026-04-07, 03:40am
+- Author: Hitesh
+- Description: Added persisted model state load/save, configurable state-file paths, optional auth user seeding, and onboarding docs so new teammates can reuse prior runtime state.
+
 ## Repositioned Rail CTA and Replaced Loading Bars
 
 - Timestamp: 2026-04-07, 03:30am

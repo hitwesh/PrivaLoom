@@ -82,6 +82,7 @@ PrivaLoom/
 Notes:
 - Model artifacts in `model/` are generated/used locally.
 - `.gitignore` excludes heavy model files while preserving source files in `model/*.py`.
+- Runtime auth DB defaults to `data/auth.db` and is ignored by git to avoid leaking credentials.
 
 ## Architecture at a glance
 
@@ -144,6 +145,44 @@ python model/download_model.py
 ```
 
 If you skip this step, the first run of model loading will auto-download and cache assets into `./model`.
+
+## Team handoff and persistence (important)
+
+By default, some runtime state is machine-local. To ensure a new teammate sees historical users,
+security/reputation state, aggregation progress, and trained model weights, configure shared paths
+and optionally seed users.
+
+Recommended environment variables:
+
+- `AGGREGATION_STATE_PATH` (default: `data/aggregation_state.json`)
+- `PRIVACY_STATE_PATH` (default: `data/privacy_state.json`)
+- `REPUTATION_STATE_PATH` (default: `data/reputation_state.json`)
+- `SECURITY_EVENTS_PATH` (default: `data/security_events.jsonl`)
+- `AUTH_DB_PATH` (default: `data/auth.db`)
+- `AUTH_SEED_FILE` (optional path to JSON user seed file)
+- `MODEL_PERSIST_ENABLED` (default: `true`)
+- `MODEL_STATE_PATH` (default: `data/model_state.pt`)
+
+Behavior:
+
+- Aggregation rounds and privacy/reputation/security history persist to configured files.
+- The model state is saved after each successful aggregation round and reloaded on server startup.
+- Users can be seeded from `AUTH_SEED_FILE` (JSON list with `username`, `password`, `role`).
+
+Example seed file:
+
+```json
+[
+  {"username": "admin", "password": "admin123", "role": "admin"},
+  {"username": "demo_user", "password": "strongpass123", "role": "user"}
+]
+```
+
+Practical sharing model:
+
+1. Keep git for code/history (`git log`, PR history, changelog).
+2. Share runtime artifacts (`data/*.json`, `data/*.jsonl`, `data/model_state.pt`) through release artifacts or shared storage.
+3. Do not commit real production `data/auth.db`; use `AUTH_SEED_FILE` for reproducible non-production users.
 
 ## Running the project
 
@@ -260,7 +299,7 @@ The project currently follows a strict update pattern:
 ## Known limitations
 
 - in-memory update buffer only (no persistence)
-- no model checkpoint/version management after updates
+- model checkpoint now persists to a single state file, but versioned checkpoint management is not implemented
 - auth is local SQLite-based only (no MFA, SSO, or password reset flow)
 - anti-poisoning protections are heuristic and need broader adversarial validation
 - automated tests exist, but auth/RBAC end-to-end coverage is still limited
