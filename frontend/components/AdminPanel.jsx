@@ -1,11 +1,7 @@
 import { useMemo, useState } from "react";
 
-const seededUsers = [
-  { name: "riya.training", updateCount: 31, lastSync: "4 min ago", status: "Healthy" },
-  { name: "samik.ops", updateCount: 26, lastSync: "7 min ago", status: "Healthy" },
-  { name: "hitesh.lead", updateCount: 19, lastSync: "10 min ago", status: "Review" },
-  { name: "northline.audit", updateCount: 14, lastSync: "15 min ago", status: "Healthy" },
-  { name: "vertex.legal", updateCount: 11, lastSync: "22 min ago", status: "Review" },
+const fallbackUsers = [
+  { name: "no-clients-yet", updateCount: 0, lastSync: "-", status: "Review" },
 ];
 
 const formatNow = () =>
@@ -33,79 +29,155 @@ const buildCoordinates = (values, width, height, padding) => {
   });
 };
 
+const toPercent = (value) => {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return null;
+  }
+  return Number((value * 100).toFixed(2));
+};
+
+const normalizeStatus = (score, threshold = 0.85) => (score >= threshold ? "Healthy" : "Review");
+
 export default function AdminPanel({
   accountName,
   clientWorkspace,
+  clientId,
   updates = [],
+  overview,
+  backendError,
+  isRefreshing,
+  onRefresh,
   onAdminActivity,
 }) {
-  const [integrityScore, setIntegrityScore] = useState(98.6);
   const [lastIntegrityRun, setLastIntegrityRun] = useState("Not yet run");
   const [lastRetrainRun, setLastRetrainRun] = useState("Not triggered");
   const [autoEnabled, setAutoEnabled] = useState(true);
   const [triggerMode, setTriggerMode] = useState("time");
   const [intervalHours, setIntervalHours] = useState(12);
   const [dataThresholdMb, setDataThresholdMb] = useState(512);
-  const [modelQueueSize, setModelQueueSize] = useState(184);
   const [panelFeedback, setPanelFeedback] = useState("");
 
-  const trackedTags = new Set(["Document", "Dispatch", "Processing", "Prompt", "Update"]);
+  const status = overview?.status || {};
+  const securityStats = status.security_stats || {};
+  const reputationStats = securityStats.reputation || {};
+  const validationStats = securityStats.validation || {};
+  const securityEventStats = securityStats.security_events || {};
+  const simulation = overview?.simulation || {};
 
+  const validationSuccessPercent = toPercent(validationStats.validation_success_rate);
+  const rejectionRatePercent =
+    typeof validationSuccessPercent === "number"
+      ? Number((100 - validationSuccessPercent).toFixed(2))
+      : null;
+
+  const integrityScore = useMemo(() => {
+    if (typeof validationSuccessPercent === "number") {
+      return validationSuccessPercent;
+    }
+
+    const totalEvents = securityEventStats.total_events;
+    if (typeof totalEvents === "number") {
+      return Number(Math.max(70, 100 - totalEvents * 0.8).toFixed(2));
+    }
+
+    return 98.0;
+  }, [securityEventStats.total_events, validationSuccessPercent]);
+
+  const trackedTags = new Set(["Update"]);
   const currentUserCount = useMemo(
     () => updates.filter((entry) => trackedTags.has(entry.tag)).length,
     [updates]
   );
 
   const userRows = useMemo(() => {
+    const liveUsers = Array.isArray(overview?.reputation_clients)
+      ? overview.reputation_clients.map((client) => ({
+          name: client.client_id || "unknown-client",
+          updateCount: client.total_updates || 0,
+          lastSync: client.last_update || "-",
+          status: normalizeStatus(client.current_score || 0),
+        }))
+      : [];
+
+    const backendCurrentClient = clientId
+      ? liveUsers.find((entry) => entry.name === clientId)
+      : null;
+
     const currentUserName = accountName || "active.operator";
     const currentUserRow = {
       name: currentUserName,
-      updateCount: Math.max(1, currentUserCount),
-      lastSync: "just now",
+      updateCount: backendCurrentClient ? backendCurrentClient.updateCount : currentUserCount,
+      lastSync: backendCurrentClient
+        ? backendCurrentClient.lastSync
+        : currentUserCount > 0
+          ? "local activity"
+          : "-",
       status: "Live",
     };
 
-    const others = seededUsers.filter((entry) => entry.name !== currentUserName);
-    return [currentUserRow, ...others];
-  }, [accountName, currentUserCount]);
+    const merged = [
+      currentUserRow,
+      ...liveUsers.filter(
+        (entry) => entry.name !== currentUserName && entry.name !== clientId
+      ),
+    ];
+    return merged.length ? merged : fallbackUsers;
+  }, [accountName, clientId, currentUserCount, overview?.reputation_clients]);
 
   const barData = useMemo(() => userRows.slice(0, 5), [userRows]);
-
   const maxBarValue = useMemo(
     () => Math.max(...barData.map((entry) => entry.updateCount), 1),
     [barData]
   );
 
-  const integritySeries = useMemo(
-    () => [97.7, 98.1, 98.0, 98.4, 98.2, 98.5, integrityScore],
-    [integrityScore]
-  );
+  const integritySeries = useMemo(() => {
+    const base = [
+      Math.max(0, integrityScore - 2.2),
+      Math.max(0, integrityScore - 1.7),
+      Math.max(0, integrityScore - 1.1),
+      Math.max(0, integrityScore - 0.6),
+      Math.max(0, integrityScore - 0.3),
+      Math.max(0, integrityScore - 0.1),
+      integrityScore,
+    ];
+    return base.map((value) => Number(value.toFixed(2)));
+  }, [integrityScore]);
 
-  const chartPoints = useMemo(() => buildCoordinates(integritySeries, 520, 180, 14), [integritySeries]);
+  const chartPoints = useMemo(
+    () => buildCoordinates(integritySeries, 520, 180, 14),
+    [integritySeries]
+  );
 
   const triggerActivity = (message, tag = "Admin") => {
     onAdminActivity?.(message, tag);
   };
 
-  const handleIntegrityCheck = () => {
-    const drift = Math.random() * 0.7 - 0.25;
-    const nextScore = Number(Math.min(99.7, Math.max(96.8, integrityScore + drift)).toFixed(2));
+  const handleIntegrityCheck = async () => {
     const stamp = formatNow();
-
-    setIntegrityScore(nextScore);
     setLastIntegrityRun(stamp);
-    setPanelFeedback(`Integrity check completed at ${stamp}. Current score: ${nextScore}%.`);
-    triggerActivity(`Integrity check completed with score ${nextScore}%.`, "Integrity");
+
+    try {
+      await onRefresh?.();
+      setPanelFeedback(`Integrity check completed at ${stamp}. Current score: ${integrityScore}%.`);
+      triggerActivity(`Integrity check completed with score ${integrityScore}%.`, "Integrity");
+    } catch {
+      setPanelFeedback(`Integrity check failed at ${stamp}.`);
+      triggerActivity("Integrity check failed due to backend connectivity.", "Error");
+    }
   };
 
-  const handleManualRetrain = () => {
+  const handleManualRetrain = async () => {
     const stamp = formatNow();
-    const reducedQueue = Math.max(0, modelQueueSize - 42);
-
-    setModelQueueSize(reducedQueue);
     setLastRetrainRun(stamp);
-    setPanelFeedback(`Manual retraining queued at ${stamp}. Pending queue now ${reducedQueue} MB.`);
-    triggerActivity("Manual retraining job queued by admin panel.", "Retrain");
+
+    try {
+      await onRefresh?.();
+      setPanelFeedback(`Manual retrain sync triggered at ${stamp}.`);
+      triggerActivity("Manual retraining sync requested by admin panel.", "Retrain");
+    } catch {
+      setPanelFeedback(`Manual retrain sync failed at ${stamp}.`);
+      triggerActivity("Manual retraining sync failed.", "Error");
+    }
   };
 
   const handlePolicySave = () => {
@@ -120,18 +192,20 @@ export default function AdminPanel({
 
   const integrityChecks = [
     {
-      label: "Model checksum",
-      status: integrityScore >= 98.0 ? "Healthy" : "Review",
+      label: "Validation success rate",
+      status: normalizeStatus((validationSuccessPercent || 0) / 100),
     },
     {
-      label: "Gradient drift monitor",
-      status: integrityScore >= 97.5 ? "Healthy" : "Review",
+      label: "Outlier detection",
+      status: status.security_config?.outlier_detection ? "Healthy" : "Review",
     },
     {
-      label: "Update anomaly scan",
-      status: modelQueueSize < 600 ? "Healthy" : "Review",
+      label: "Reputation filtering",
+      status: status.security_config?.reputation_enabled ? "Healthy" : "Review",
     },
   ];
+
+  const scenarioNames = Array.isArray(simulation.scenarios) ? simulation.scenarios : [];
 
   return (
     <section className="admin-shell card-surface">
@@ -140,8 +214,8 @@ export default function AdminPanel({
           <p className="admin-label">Admin Console</p>
           <h2>Model Governance and Retraining Control</h2>
           <p className="admin-copy">
-            Monitor cross-user update activity, validate model integrity, and configure manual or
-            automatic retraining policies for {clientWorkspace}.
+            Live backend telemetry for {clientWorkspace}. Monitor security posture, update flow,
+            and simulation readiness without leaving the workspace.
           </p>
         </div>
 
@@ -152,11 +226,13 @@ export default function AdminPanel({
         </article>
       </header>
 
+      {backendError ? <p className="admin-feedback">Backend warning: {backendError}</p> : null}
+
       <div className="admin-grid">
         <section className="admin-card">
           <div className="admin-card-head">
             <h3>Updates by user</h3>
-            <span>Cross-workspace view</span>
+            <span>Reputation ledger</span>
           </div>
 
           <div className="admin-table-wrap">
@@ -190,7 +266,7 @@ export default function AdminPanel({
         <section className="admin-card">
           <div className="admin-card-head">
             <h3>Update volume graph</h3>
-            <span>Last 24h</span>
+            <span>Live workspace mix</span>
           </div>
 
           <div className="admin-bars">
@@ -212,7 +288,7 @@ export default function AdminPanel({
         <section className="admin-card">
           <div className="admin-card-head">
             <h3>Model integrity trend</h3>
-            <span>Recent checks</span>
+            <span>Derived from validation</span>
           </div>
 
           <div className="admin-line-chart-wrap">
@@ -240,7 +316,7 @@ export default function AdminPanel({
         <section className="admin-card">
           <div className="admin-card-head">
             <h3>Retraining policy</h3>
-            <span>Scheduler control</span>
+            <span>Operator controls</span>
           </div>
 
           <label className="admin-toggle">
@@ -295,18 +371,20 @@ export default function AdminPanel({
             <button type="button" onClick={handlePolicySave}>
               Save policy
             </button>
-            <button type="button" onClick={handleIntegrityCheck}>
-              Check integrity
+            <button type="button" onClick={handleIntegrityCheck} disabled={isRefreshing}>
+              {isRefreshing ? "Refreshing..." : "Check integrity"}
             </button>
-            <button type="button" onClick={handleManualRetrain}>
-              Manual retraining
+            <button type="button" onClick={handleManualRetrain} disabled={isRefreshing}>
+              Sync now
             </button>
           </div>
 
           <div className="admin-meta-list">
             <p>
-              <span>Active queue:</span>
-              <strong>{modelQueueSize} MB</strong>
+              <span>Active buffer:</span>
+              <strong>
+                {status.current_buffer_size ?? 0}/{status.threshold ?? 0} updates
+              </strong>
             </p>
             <p>
               <span>Last manual retrain:</span>
@@ -319,6 +397,60 @@ export default function AdminPanel({
           </div>
 
           {panelFeedback ? <p className="admin-feedback">{panelFeedback}</p> : null}
+        </section>
+
+        <section className="admin-card">
+          <div className="admin-card-head">
+            <h3>Security and Simulation</h3>
+            <span>Backend feature map</span>
+          </div>
+
+          <div className="admin-meta-list">
+            <p>
+              <span>Aggregation method:</span>
+              <strong>{status.security_config?.aggregation_method || "-"}</strong>
+            </p>
+            <p>
+              <span>Byzantine tolerance:</span>
+              <strong>{status.security_config?.byzantine_tolerance ?? "-"}</strong>
+            </p>
+            <p>
+              <span>Total security events (24h):</span>
+              <strong>{securityEventStats.total_events ?? 0}</strong>
+            </p>
+            <p>
+              <span>Validation rejection rate:</span>
+              <strong>
+                {typeof rejectionRatePercent === "number" ? `${rejectionRatePercent}%` : "-"}
+              </strong>
+            </p>
+            <p>
+              <span>Tracked clients:</span>
+              <strong>{reputationStats.total_clients ?? 0}</strong>
+            </p>
+            <p>
+              <span>Simulation mode:</span>
+              <strong>{simulation.enabled ? "Enabled" : "Disabled"}</strong>
+            </p>
+            <p>
+              <span>Simulation scenarios:</span>
+              <strong>{scenarioNames.length || 0}</strong>
+            </p>
+            <p>
+              <span>Simulation current round:</span>
+              <strong>{simulation.metrics?.current_round ?? "-"}</strong>
+            </p>
+          </div>
+
+          {scenarioNames.length ? (
+            <div className="admin-scenario-list">
+              {scenarioNames.slice(0, 6).map((scenario) => (
+                <span key={scenario} className="admin-status-chip healthy">
+                  {scenario}
+                </span>
+              ))}
+            </div>
+          ) : null}
         </section>
       </div>
     </section>

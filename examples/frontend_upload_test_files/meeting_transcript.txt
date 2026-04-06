@@ -1,0 +1,8 @@
+Meeting transcript excerpt
+
+Lead: We need cleaner update batches before nightly rounds.
+Engineer A: I will add preprocessing checks on uploaded files.
+Engineer B: We also need better visibility for rejected updates.
+Lead: Add event tags for validation, reputation, and aggregation.
+Engineer A: Done. Admin panel will show rejection and client quality trends.
+Lead: Keep all testing data synthetic and non-sensitive.

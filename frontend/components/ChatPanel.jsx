@@ -1,7 +1,14 @@
 import { useState } from "react";
 
-export default function ChatPanel({ accountName, clientWorkspace, onPromptSubmitted }) {
+export default function ChatPanel({
+  accountName,
+  clientWorkspace,
+  onPromptSubmitted,
+  backendError,
+  statusSummary,
+}) {
   const [message, setMessage] = useState("");
+  const [isSending, setIsSending] = useState(false);
   const [history, setHistory] = useState([
     {
       role: "assistant",
@@ -9,31 +16,51 @@ export default function ChatPanel({ accountName, clientWorkspace, onPromptSubmit
     },
   ]);
 
-  const sendMessage = () => {
+  const sendMessage = async () => {
     const trimmed = message.trim();
-    if (!trimmed) {
+    if (!trimmed || isSending) {
       return;
     }
-
-    onPromptSubmitted?.(trimmed);
 
     setHistory((prev) => [
       ...prev,
       { role: "user", text: trimmed },
-      {
-        role: "assistant",
-        text: "Received. In a full integration, this message would be processed by your local model endpoint.",
-      },
     ]);
     setMessage("");
+
+    try {
+      setIsSending(true);
+      const responseText = await onPromptSubmitted?.(trimmed);
+      setHistory((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          text: responseText || "No model response returned.",
+        },
+      ]);
+    } catch (error) {
+      const text = error instanceof Error ? error.message : "Request failed.";
+      setHistory((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          text: `Chat request failed: ${text}`,
+        },
+      ]);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleKeyDown = (event) => {
-    if (event.key === "Enter") {
+    if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       sendMessage();
     }
   };
+
+  const bufferCount = statusSummary?.current_buffer_size ?? 0;
+  const threshold = statusSummary?.threshold ?? "?";
 
   return (
     <section className="chat-shell card-surface">
@@ -44,9 +71,11 @@ export default function ChatPanel({ accountName, clientWorkspace, onPromptSubmit
         </div>
         <span className="chat-status">
           <span className="status-dot" />
-          Private session
+          {backendError ? "Backend issue" : `Buffer ${bufferCount}/${threshold}`}
         </span>
       </header>
+
+      {backendError ? <p className="chat-error-banner">{backendError}</p> : null}
 
       <div className="chat-scroll">
         {history.map((item, index) => (
@@ -64,12 +93,13 @@ export default function ChatPanel({ accountName, clientWorkspace, onPromptSubmit
           className="chat-input"
           type="text"
           value={message}
+          disabled={isSending}
           onChange={(event) => setMessage(event.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Message your local model..."
         />
-        <button className="chat-send-btn" type="button" onClick={sendMessage}>
-          Send
+        <button className="chat-send-btn" type="button" onClick={sendMessage} disabled={isSending}>
+          {isSending ? "Sending..." : "Send"}
         </button>
       </div>
     </section>

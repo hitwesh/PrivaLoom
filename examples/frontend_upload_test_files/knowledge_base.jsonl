@@ -1,0 +1,5 @@
+{"id":"kb-001","title":"Safe Prompting Guide","body":"Use direct, task-focused prompts and avoid sharing sensitive identifiers.","tags":["privacy","prompting"]}
+{"id":"kb-002","title":"Upload Workflow","body":"Select files, verify in selection tab, then send updates to backend.","tags":["frontend","upload"]}
+{"id":"kb-003","title":"Admin Checklist","body":"Watch buffer size, rejection trends, and recent security events.","tags":["admin","monitoring"]}
+{"id":"kb-004","title":"Simulation Visibility","body":"Scenario list and current round metrics are exposed when simulation mode is on.","tags":["simulation","metrics"]}
+{"id":"kb-005","title":"Troubleshooting","body":"If backend is unreachable, verify API base URL and server port.","tags":["ops","debugging"]}

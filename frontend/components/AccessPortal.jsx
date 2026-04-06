@@ -12,8 +12,9 @@ export default function AccessPortal({ onBack, onContinue }) {
   const [password, setPassword] = useState("");
   const [clientWorkspace, setClientWorkspace] = useState(workspaceOptions[0]);
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     if (!accountName.trim() || !password.trim()) {
@@ -22,10 +23,22 @@ export default function AccessPortal({ onBack, onContinue }) {
     }
 
     setError("");
-    onContinue({
-      accountName: accountName.trim(),
-      clientWorkspace,
-    });
+
+    try {
+      setIsSubmitting(true);
+      const result = await onContinue({
+        accountName: accountName.trim(),
+        clientWorkspace,
+      });
+
+      if (result && result.ok === false) {
+        setError(result.error || "Unable to open workspace.");
+      }
+    } catch {
+      setError("Unable to open workspace right now. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -81,8 +94,8 @@ export default function AccessPortal({ onBack, onContinue }) {
           <button className="btn-ghost" type="button" onClick={onBack}>
             Back
           </button>
-          <button className="btn-primary" type="submit">
-            Open Workspace
+          <button className="btn-primary" type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Connecting..." : "Open Workspace"}
           </button>
         </div>
       </form>

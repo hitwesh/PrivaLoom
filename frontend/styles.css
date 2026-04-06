@@ -180,6 +180,15 @@ body {
   text-overflow: ellipsis;
 }
 
+.header-syncing {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-subtle);
+  font-size: 10px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
 .header-login {
   border: 1px solid rgba(255, 255, 255, 0.16);
   background: rgba(255, 255, 255, 0.03);
@@ -1300,6 +1309,13 @@ body {
   color: var(--text-soft);
 }
 
+.status-footnote {
+  margin: 12px 0 0;
+  color: var(--text-subtle);
+  font-size: 11px;
+  letter-spacing: 0.03em;
+}
+
 .update-row {
   display: grid;
   grid-template-columns: 62px 1fr;
@@ -1804,6 +1820,13 @@ body {
   background: rgba(255, 255, 255, 0.04);
 }
 
+.admin-scenario-list {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .chat-shell {
   width: 100%;
   display: flex;
@@ -1847,6 +1870,17 @@ body {
   color: var(--text-soft);
   font-size: 12px;
   white-space: nowrap;
+}
+
+.chat-error-banner {
+  margin: 12px 4px 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(240, 111, 111, 0.5);
+  background: rgba(240, 111, 111, 0.12);
+  color: #f4caca;
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .status-dot {

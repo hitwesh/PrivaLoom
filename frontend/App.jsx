@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import UploadPanel from "./components/UploadPanel";
 import TrainingStatus from "./components/TrainingStatus";
 import UpdateLog from "./components/UpdateLog";
@@ -8,6 +8,16 @@ import LandingPage from "./components/LandingPage";
 import AccessPortal from "./components/AccessPortal";
 import ArchitecturePage from "./components/ArchitecturePage";
 import AdminPanel from "./components/AdminPanel";
+import {
+  getApiBaseUrl,
+  getClientId,
+  getFrontendOverview,
+  getHealth,
+  normalizeError,
+  sendChatPrompt,
+  sendModelUpdate,
+} from "./lib/api";
+import { buildUpdateWeightsFromFiles } from "./lib/updatePayload";
 
 const MAX_LOG_ITEMS = 8;
 
@@ -60,6 +70,11 @@ export default function App() {
   });
   const [activityLog, setActivityLog] = useState([]);
   const [workspaceView, setWorkspaceView] = useState("chat");
+  const [backendOverview, setBackendOverview] = useState(null);
+  const [backendError, setBackendError] = useState("");
+  const [isBootstrappingWorkspace, setIsBootstrappingWorkspace] = useState(false);
+  const [isRefreshingOverview, setIsRefreshingOverview] = useState(false);
+  const previousOverviewRef = useRef(null);
 
   const canOpenWorkspace = Boolean(session.accountName && session.clientWorkspace);
 
@@ -67,15 +82,36 @@ export default function App() {
     setActivityLog((prev) => [createLogEntry(text, tag), ...prev].slice(0, MAX_LOG_ITEMS));
   };
 
-  const handleAccessContinue = ({ accountName, clientWorkspace }) => {
-    setSession({ accountName, clientWorkspace });
-    setWorkspaceView("chat");
-    setActivityLog([
-      createLogEntry(`Workspace opened for ${accountName} in ${clientWorkspace}.`, "Session"),
-      createLogEntry("Awaiting first document upload for local training updates.", "Data"),
-      createLogEntry("Private model channel initialized for this workspace.", "Model"),
-    ]);
-    setStage("workspace");
+  const handleAccessContinue = async ({ accountName, clientWorkspace }) => {
+    setIsBootstrappingWorkspace(true);
+
+    try {
+      await getHealth();
+      const overview = await getFrontendOverview();
+      setBackendOverview(overview);
+      previousOverviewRef.current = overview;
+      setBackendError("");
+
+      setSession({ accountName, clientWorkspace });
+      setWorkspaceView("chat");
+      setActivityLog([
+        createLogEntry(`Workspace opened for ${accountName} in ${clientWorkspace}.`, "Session"),
+        createLogEntry(
+          `Connected to backend at ${getApiBaseUrl()} with client ID ${getClientId().slice(0, 8)}...`,
+          "Connectivity"
+        ),
+        createLogEntry("Workspace synced with live aggregation and security telemetry.", "Sync"),
+      ]);
+      setStage("workspace");
+
+      return { ok: true };
+    } catch (error) {
+      const message = `Cannot reach backend at ${getApiBaseUrl()}: ${normalizeError(error)}`;
+      setBackendError(message);
+      return { ok: false, error: message };
+    } finally {
+      setIsBootstrappingWorkspace(false);
+    }
   };
 
   const handleDocumentChange = ({ fileName, fileSize }) => {
@@ -87,20 +123,49 @@ export default function App() {
     appendActivity("Local update extraction queued after validation checks.", "Pipeline");
   };
 
-  const handlePromptSubmitted = (prompt) => {
+  const handlePromptSubmitted = async (prompt) => {
     const trimmedPreview = prompt.length > 58 ? `${prompt.slice(0, 58)}...` : prompt;
     appendActivity(`Prompt submitted: "${trimmedPreview}"`, "Prompt");
-    appendActivity("Learning signal generation triggered from latest interaction.", "Update");
+
+    try {
+      const result = await sendChatPrompt(prompt);
+      appendActivity("Model response returned from /chat.", "Chat");
+      return result.response || "No response received from model.";
+    } catch (error) {
+      const message = normalizeError(error);
+      appendActivity(`Chat request failed: ${message}`, "Error");
+      throw error;
+    }
   };
 
   const handleSendDatasetUpdates = async ({ files }) => {
     if (!files?.length) {
-      return;
+      return { status: "skipped", reason: "no_files" };
     }
 
     const label = files.length === 1 ? files[0].fileName : `${files.length} files`;
-    appendActivity(`Update package sent with ${label}.`, "Dispatch");
-    appendActivity("Dataset payload forwarded for processing.", "Processing");
+    appendActivity(`Preparing update package from ${label}.`, "Dispatch");
+
+    try {
+      const weights = await buildUpdateWeightsFromFiles(files);
+      const result = await sendModelUpdate(weights);
+
+      if (result.status === "accepted") {
+        appendActivity(
+          `Update accepted. Buffer ${result.buffer_count}/${backendOverview?.status?.threshold ?? "?"}.`,
+          "Update"
+        );
+      } else if (result.status === "rejected") {
+        appendActivity(`Update rejected: ${result.reason}.`, "Validation");
+      } else {
+        appendActivity(`Update pipeline returned: ${result.status || "unknown"}.`, "Processing");
+      }
+
+      return result;
+    } catch (error) {
+      appendActivity(`Update dispatch failed: ${normalizeError(error)}`, "Error");
+      throw error;
+    }
   };
 
   const handleAdminActivity = (message, tag = "Admin") => {
@@ -110,6 +175,79 @@ export default function App() {
 
     appendActivity(message, tag);
   };
+
+  const refreshOverview = async ({ silent = false } = {}) => {
+    setIsRefreshingOverview(true);
+
+    try {
+      const overview = await getFrontendOverview();
+      const previous = previousOverviewRef.current;
+
+      setBackendOverview(overview);
+      previousOverviewRef.current = overview;
+      setBackendError("");
+
+      if (!silent) {
+        appendActivity("Backend telemetry refreshed.", "Sync");
+      }
+
+      if (
+        previous &&
+        previous.status?.current_buffer_size > 0 &&
+        overview.status?.current_buffer_size === 0 &&
+        overview.status?.aggregation_stats?.total_rounds_completed >
+          previous.status?.aggregation_stats?.total_rounds_completed
+      ) {
+        appendActivity(
+          `Aggregation round ${overview.status?.aggregation_stats?.total_rounds_completed} completed.`,
+          "Aggregation"
+        );
+      }
+
+      return overview;
+    } catch (error) {
+      const message = normalizeError(error);
+      setBackendError(message);
+
+      if (!silent) {
+        appendActivity(`Telemetry refresh failed: ${message}`, "Error");
+      }
+
+      throw error;
+    } finally {
+      setIsRefreshingOverview(false);
+    }
+  };
+
+  useEffect(() => {
+    if (stage !== "workspace") {
+      return undefined;
+    }
+
+    let isActive = true;
+
+    const pull = async (silent) => {
+      if (!isActive) {
+        return;
+      }
+
+      try {
+        await refreshOverview({ silent });
+      } catch {
+        // Error is reflected in backendError state.
+      }
+    };
+
+    pull(true);
+    const interval = window.setInterval(() => {
+      pull(true);
+    }, 6000);
+
+    return () => {
+      isActive = false;
+      window.clearInterval(interval);
+    };
+  }, [stage]);
 
   const renderStage = () => {
     if (stage === "landing") {
@@ -165,11 +303,19 @@ export default function App() {
               onDocumentChange={handleDocumentChange}
               onSendUpdates={handleSendDatasetUpdates}
             />
-            <TrainingStatus />
+            <TrainingStatus
+              overview={backendOverview}
+              backendError={backendError}
+              isRefreshing={isRefreshingOverview}
+              clientId={getClientId()}
+            />
             <UpdateLog updates={activityLog} />
           </div>
 
-          <PrivacyBadge />
+          <PrivacyBadge
+            apiBaseUrl={getApiBaseUrl()}
+            backendStatus={backendOverview?.status?.server_status}
+          />
         </aside>
 
         <main className="workspace-main">
@@ -196,12 +342,19 @@ export default function App() {
                 accountName={session.accountName}
                 clientWorkspace={session.clientWorkspace}
                 onPromptSubmitted={handlePromptSubmitted}
+                backendError={backendError}
+                statusSummary={backendOverview?.status}
               />
             ) : (
               <AdminPanel
                 accountName={session.accountName}
                 clientWorkspace={session.clientWorkspace}
+                clientId={getClientId()}
                 updates={activityLog}
+                overview={backendOverview}
+                backendError={backendError}
+                isRefreshing={isRefreshingOverview}
+                onRefresh={() => refreshOverview({ silent: false })}
                 onAdminActivity={handleAdminActivity}
               />
             )}
@@ -268,9 +421,14 @@ export default function App() {
                 {session.accountName}
               </span>
             ) : (
-              <button className="header-login" type="button" onClick={() => setStage("access")}>
-                Log in
-              </button>
+              <div>
+                <button className="header-login" type="button" onClick={() => setStage("access")}>
+                  Log in
+                </button>
+                {isBootstrappingWorkspace ? (
+                  <small className="header-syncing">Connecting...</small>
+                ) : null}
+              </div>
             )}
             <button
               className={`header-cta ${stage === "workspace" && canOpenWorkspace ? "is-workspace-active" : ""}`}

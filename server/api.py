@@ -2,6 +2,7 @@ import threading
 import time
 import torch
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Any, Optional
 
@@ -18,10 +19,27 @@ from privacy_security import (
     OutlierDetector, OutlierDetectionMethod,
     get_reputation_manager, calculate_quality_score,
     get_security_monitor, create_malicious_update_event, create_outlier_event,
-    create_update_validator, ValidationError
+    create_update_validator, ValidationError, get_privacy_tracker
 )
 
 app = FastAPI()
+
+frontend_origins = [
+    origin.strip()
+    for origin in config.get_str(
+        "FRONTEND_ORIGINS",
+        "http://127.0.0.1:5173,http://localhost:5173",
+    ).split(",")
+    if origin.strip()
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=frontend_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Initialize logger for server
 logger = setup_logger("privaloom.server")
@@ -99,6 +117,108 @@ class UpdateRequest(BaseModel):
     client_id: str  # NEW: Required client identification
     timestamp: Optional[int] = None  # For replay protection (future)
 
+
+def _get_reputation_clients(limit: int = 50) -> list[dict[str, Any]]:
+    """Get sorted client reputation stats for dashboards."""
+    if not reputation_manager:
+        return []
+
+    try:
+        clients = []
+        state = getattr(reputation_manager, "_state", None)
+        tracked_clients = getattr(state, "clients", {}) if state else {}
+
+        for client_id, reputation in tracked_clients.items():
+            score = float(getattr(reputation, "score", 0.0))
+            total_updates = int(getattr(reputation, "total_updates", 0))
+            threshold = getattr(reputation_manager, "min_reputation_threshold", 0.3)
+
+            clients.append(
+                {
+                    "client_id": client_id,
+                    "current_score": score,
+                    "total_updates": total_updates,
+                    "last_update": getattr(reputation, "last_update_time", None),
+                    "created_time": getattr(reputation, "created_time", None),
+                    "is_accepted": score >= threshold,
+                    "aggregation_weight": score if score >= threshold else 0.0,
+                }
+            )
+
+        clients.sort(key=lambda client: client.get("total_updates", 0), reverse=True)
+        return clients[:limit]
+    except Exception as e:
+        log_error(logger, f"Failed to read reputation client stats: {e}")
+        return []
+
+
+def _get_recent_security_events(hours: int = 24, limit: int = 50) -> list[dict[str, Any]]:
+    """Get recent security events for dashboard display."""
+    if not security_monitor:
+        return []
+
+    try:
+        events = security_monitor.get_recent_events(hours=hours)
+        return [event.to_dict() for event in events[:limit]]
+    except Exception as e:
+        log_error(logger, f"Failed to read recent security events: {e}")
+        return []
+
+
+def _get_simulation_scenario_names() -> list[str]:
+    """Get available simulation scenarios from scenario library."""
+    try:
+        from simulation.scenarios import get_scenario_library
+
+        return sorted(get_scenario_library().list_scenarios())
+    except Exception as e:
+        log_warning(logger, f"Failed to list simulation scenarios: {e}")
+        return []
+
+
+def _get_simulation_metrics_payload() -> Optional[dict[str, Any]]:
+    """Return simulation metrics payload or None when unavailable."""
+    if not SIMULATION_MODE:
+        return None
+
+    # Get client count from reputation manager
+    active_clients = 0
+    if reputation_manager:
+        try:
+            active_clients = len(reputation_manager.get_all_client_ids())
+        except AttributeError:
+            active_clients = 0
+
+    # Get recent security events
+    recent_security_events = 0
+    if security_monitor:
+        recent_events = security_monitor.get_recent_events(hours=1)
+        recent_security_events = len(recent_events)
+
+    # Get current round information
+    current_round = round_tracker.get_current_round()
+
+    # Get aggregation stats if available
+    aggregation_stats = {}
+    if hasattr(aggregator_factory, "get_aggregation_stats"):
+        try:
+            aggregation_stats = aggregator_factory.get_aggregation_stats()
+        except Exception:
+            aggregation_stats = {}
+
+    return {
+        "simulation_active": True,
+        "active_clients": active_clients,
+        "recent_security_events": recent_security_events,
+        "current_round": current_round,
+        "aggregation_method": AGGREGATION_METHOD,
+        "byzantine_tolerance": BYZANTINE_TOLERANCE,
+        "buffer_size": len(global_updates),
+        "update_threshold": UPDATE_THRESHOLD,
+        "aggregation_stats": aggregation_stats,
+        "timestamp": time.time(),
+    }
+
 @app.get("/")
 def home() -> dict[str, str]:
     return {"message": "PrivaLoom Server with Byzantine Robust Aggregation"}
@@ -140,48 +260,68 @@ def get_status() -> dict:
 @app.get("/simulation/metrics")
 def get_simulation_metrics() -> dict[str, Any]:
     """Get real-time simulation metrics for monitoring."""
-    from fastapi import HTTPException
+    metrics = _get_simulation_metrics_payload()
+    if metrics is None:
+        from fastapi import HTTPException
 
-    if not SIMULATION_MODE:
         raise HTTPException(status_code=404, detail="Simulation mode not active")
+    return metrics
 
-    # Get client count from reputation manager
-    active_clients = 0
-    if reputation_manager:
-        try:
-            active_clients = len(reputation_manager.get_all_client_ids())
-        except AttributeError:
-            # Fallback if method doesn't exist
-            active_clients = 0
 
-    # Get recent security events
-    recent_security_events = 0
-    if security_monitor:
-        recent_events = security_monitor.get_recent_events(hours=1)
-        recent_security_events = len(recent_events)
+@app.get("/reputation/clients")
+def get_reputation_clients(limit: int = 50) -> dict[str, Any]:
+    """Get client-level reputation details for frontend admin views."""
+    safe_limit = max(1, min(limit, 200))
+    clients = _get_reputation_clients(limit=safe_limit)
+    return {
+        "count": len(clients),
+        "clients": clients,
+    }
 
-    # Get current round information
-    current_round = round_tracker.get_current_round()
 
-    # Get aggregation stats if available
-    aggregation_stats = {}
-    if hasattr(aggregator_factory, 'get_aggregation_stats'):
-        try:
-            aggregation_stats = aggregator_factory.get_aggregation_stats()
-        except:
-            pass
+@app.get("/security/events")
+def get_security_events(hours: int = 24, limit: int = 50) -> dict[str, Any]:
+    """Get recent security events with optional window and result limit."""
+    safe_hours = max(1, min(hours, 168))
+    safe_limit = max(1, min(limit, 200))
+    events = _get_recent_security_events(hours=safe_hours, limit=safe_limit)
+    return {
+        "count": len(events),
+        "hours": safe_hours,
+        "events": events,
+    }
+
+
+@app.get("/simulation/scenarios")
+def list_simulation_scenarios() -> dict[str, Any]:
+    """List available simulation scenarios for frontend controls."""
+    return {"scenarios": _get_simulation_scenario_names()}
+
+
+@app.get("/frontend/overview")
+def get_frontend_overview() -> dict[str, Any]:
+    """Consolidated dashboard payload for frontend integration."""
+    status_payload = get_status()
+    simulation_payload = _get_simulation_metrics_payload()
+
+    privacy_payload: dict[str, Any] = {}
+    try:
+        privacy_payload = get_privacy_tracker().get_cumulative_privacy()
+    except Exception as e:
+        log_warning(logger, f"Failed to fetch privacy summary: {e}")
 
     return {
-        "simulation_active": True,
-        "active_clients": active_clients,
-        "recent_security_events": recent_security_events,
-        "current_round": current_round,
-        "aggregation_method": AGGREGATION_METHOD,
-        "byzantine_tolerance": BYZANTINE_TOLERANCE,
-        "buffer_size": len(global_updates),
-        "update_threshold": UPDATE_THRESHOLD,
-        "aggregation_stats": aggregation_stats,
-        "timestamp": time.time()
+        "status": status_payload,
+        "reputation_clients": _get_reputation_clients(limit=100),
+        "recent_security_events": _get_recent_security_events(hours=24, limit=50),
+        "simulation": {
+            "enabled": SIMULATION_MODE,
+            "metrics": simulation_payload,
+            "scenarios": _get_simulation_scenario_names(),
+        },
+        "privacy": privacy_payload,
+        "frontend_origins": frontend_origins,
+        "timestamp": time.time(),
     }
 
 @app.post("/chat")
@@ -192,7 +332,7 @@ def chat(request: ChatRequest) -> dict[str, str]:
 
 
 @app.post("/send-update")
-def receive_update(update: UpdateRequest) -> dict[str, str]:
+def receive_update(update: UpdateRequest) -> dict[str, Any]:
     """Enhanced update endpoint with Byzantine-robust aggregation and security."""
     client_id = update.client_id
 

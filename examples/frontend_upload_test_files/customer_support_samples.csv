@@ -1,0 +1,6 @@
+ticket_id,channel,priority,issue_text,resolution_note
+1001,email,high,Model response was delayed for 12 seconds,Added local cache warmup during startup
+1002,chat,medium,Upload tab showed duplicate files after retry,Ignore same name+size+timestamp in UI queue
+1003,portal,low,Need quick command to check server health,Documented GET root endpoint usage in runbook
+1004,email,high,Update rejected with validation_failed,Added stricter input checks and client guidance text
+1005,chat,medium,Admin asked for scenario list in console,Exposed simulation scenarios endpoint for dashboard

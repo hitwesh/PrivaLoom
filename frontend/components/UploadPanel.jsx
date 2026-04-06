@@ -131,18 +131,35 @@ export default function UploadPanel({ onDocumentChange, onSendUpdates }) {
 
     try {
       const payload = activeFiles.map((entry) => ({
+        file: entry.file,
         fileName: entry.file.name,
         fileSize: entry.file.size,
         fileType: entry.file.type || "unknown",
         lastModified: entry.file.lastModified,
       }));
 
-      await Promise.resolve(onSendUpdates?.({ files: payload }));
-      setSendMessage(
-        `${payload.length} file${payload.length > 1 ? "s" : ""} sent for processing.`
-      );
-    } catch {
-      setSendError("Unable to send updates right now. Please try again.");
+      const result = await Promise.resolve(onSendUpdates?.({ files: payload }));
+
+      if (result?.status === "accepted") {
+        setSendMessage(
+          `Update accepted. Buffer count: ${result.buffer_count ?? 0}.`
+        );
+      } else if (result?.status === "rejected") {
+        const reason = result.reason || "validation_failed";
+        const details = Array.isArray(result.details) && result.details.length
+          ? ` (${result.details.join("; ")})`
+          : "";
+        setSendError(`Update rejected: ${reason}${details}`);
+      } else if (result?.status === "error") {
+        setSendError(`Server error: ${result.reason || "unknown"}`);
+      } else {
+        setSendMessage(
+          `${payload.length} file${payload.length > 1 ? "s" : ""} sent for processing.`
+        );
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      setSendError(`Unable to send updates right now: ${message}`);
     } finally {
       setIsSending(false);
     }

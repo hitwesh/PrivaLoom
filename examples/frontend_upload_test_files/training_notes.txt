@@ -1,0 +1,12 @@
+PrivaLoom local training notes
+
+1) Keep client prompts concise when possible.
+2) Remove names, emails, and account numbers before sharing text.
+3) Use short update batches for predictable aggregation rounds.
+4) Review security events before trusting new client updates.
+5) Track validation rejections to spot malformed data patterns.
+
+Mini examples:
+- Good sample: "Summarize the deployment checklist for branch release."
+- Good sample: "Create a short incident handoff note for on-call engineer."
+- Avoid: raw credentials, legal IDs, payment cards, personal addresses.

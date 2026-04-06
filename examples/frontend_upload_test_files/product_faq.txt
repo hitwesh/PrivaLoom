@@ -1,0 +1,16 @@
+Product FAQ
+
+Q: What does PrivaLoom do?
+A: It coordinates privacy-aware local updates and aggregation.
+
+Q: Why are some updates rejected?
+A: Validation or reputation checks can reject malformed or risky updates.
+
+Q: When does aggregation run?
+A: Aggregation triggers when the update buffer reaches the configured threshold.
+
+Q: What should an admin monitor?
+A: Buffer size, rejection rate, reputation trends, and security events.
+
+Q: Can simulation and normal mode coexist?
+A: Simulation endpoints are active only when simulation mode is enabled.

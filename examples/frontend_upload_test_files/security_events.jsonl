@@ -1,0 +1,5 @@
+{"timestamp":"2026-04-06T09:10:00Z","event_type":"validation_rejection","client_id":"client-alpha","severity":"medium","details":"shape mismatch in submitted weights"}
+{"timestamp":"2026-04-06T09:14:00Z","event_type":"outlier_detected","client_id":"client-beta","severity":"high","details":"update norm exceeded expected range"}
+{"timestamp":"2026-04-06T09:20:00Z","event_type":"reputation_drop","client_id":"client-gamma","severity":"medium","details":"consecutive low-quality updates"}
+{"timestamp":"2026-04-06T09:33:00Z","event_type":"aggregation_complete","client_id":"system","severity":"info","details":"round 18 completed successfully"}
+{"timestamp":"2026-04-06T09:41:00Z","event_type":"security_scan","client_id":"system","severity":"info","details":"no critical anomalies found"}

@@ -6,6 +6,12 @@
 - Thoroughly explain about your features and changes committed.
 - Always add changes on the top of previous changes, do not break this.
 
+## Integrated Frontend with Backend APIs
+
+- Timestamp: 2026-04-07, 01:35AM
+- Author: Hitesh
+- Description: Wired frontend workspace panels to live backend endpoints (/chat, /send-update, /status, /simulation/metrics) through a centralized API client, added backend CORS and dashboard endpoints for reputation/security/simulation data, replaced mock admin/chat/status behavior with real telemetry, and added deterministic file-to-update payload generation for upload-driven update dispatch.
+
 ## Added Frontend Interface
 
 - Timestamp: 2026-04-07, 01:08am

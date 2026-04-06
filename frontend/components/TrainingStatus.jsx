@@ -1,22 +1,34 @@
-const statusItems = [
-  {
-    label: "Model initialized",
-    state: "done",
-    stateLabel: "Online",
-  },
-  {
-    label: "GPU check complete",
-    state: "done",
-    stateLabel: "Ready",
-  },
-  {
-    label: "Awaiting training data",
-    state: "waiting",
-    stateLabel: "Waiting",
-  },
-];
+export default function TrainingStatus({ overview, backendError, isRefreshing, clientId }) {
+  const status = overview?.status;
+  const serverOnline = Boolean(status?.server_status === "running" && !backendError);
+  const currentBuffer = status?.current_buffer_size ?? 0;
+  const threshold = status?.threshold ?? "-";
+  const round = status?.aggregation_stats?.current_round ?? "-";
+  const aggregationMethod = status?.security_config?.aggregation_method || "-";
 
-export default function TrainingStatus() {
+  const statusItems = [
+    {
+      label: "Backend connectivity",
+      state: serverOnline ? "done" : "waiting",
+      stateLabel: serverOnline ? "Online" : "Offline",
+    },
+    {
+      label: "Aggregation buffer",
+      state: serverOnline && currentBuffer > 0 ? "done" : "waiting",
+      stateLabel: `${currentBuffer}/${threshold}`,
+    },
+    {
+      label: "Current round",
+      state: serverOnline ? "done" : "waiting",
+      stateLabel: String(round),
+    },
+    {
+      label: "Aggregation method",
+      state: serverOnline ? "done" : "waiting",
+      stateLabel: String(aggregationMethod),
+    },
+  ];
+
   return (
     <section className="panel card-surface">
       <div className="panel-head">
@@ -32,6 +44,12 @@ export default function TrainingStatus() {
           </li>
         ))}
       </ul>
+
+      <p className="status-footnote">
+        Client ID: {clientId?.slice(0, 8) || "-"}
+        {isRefreshing ? " | Syncing telemetry..." : ""}
+      </p>
+      {backendError ? <p className="upload-feedback error">{backendError}</p> : null}
     </section>
   );
 }
