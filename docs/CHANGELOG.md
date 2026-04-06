@@ -6,6 +6,18 @@
 - Thoroughly explain about your features and changes committed.
 - Always add changes on the top of previous changes, do not break this.
 
+## Hid Simulation Clients from Frontend Admin Views
+
+- Timestamp: 2026-04-07, 02:18am
+- Author: Hitesh
+- Description: Filtered simulation-generated client IDs (honest_*, gradient_* variants) out of admin user list/graph and adjusted tracked-client display to show only visible non-simulation clients in frontend.
+
+## Added Admin User Management and Scrollable User Ledger
+
+- Timestamp: 2026-04-07, 02:14am
+- Author: Hitesh
+- Description: Added backend admin APIs to create/remove tracked users, wired add/remove controls in the admin panel, made the user ledger a fixed-height scrollable box, and labeled simulation-style users (honest_*, gradient_*) more clearly.
+
 ## Improved Admin Text Layout and Overflow Handling
 
 - Timestamp: 2026-04-07, 02:06am

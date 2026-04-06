@@ -1542,6 +1542,21 @@ body {
 
 .admin-table-wrap {
   overflow: auto;
+  max-height: 360px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+}
+
+.admin-table-wrap::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.admin-table-wrap::-webkit-scrollbar-thumb {
+  background: #2c2e34;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 .admin-table {
@@ -1564,11 +1579,75 @@ body {
   font-size: 11px;
   letter-spacing: 0.07em;
   text-transform: uppercase;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #17191d;
 }
 
 .admin-table td {
   color: var(--text-main);
   overflow-wrap: anywhere;
+}
+
+.admin-table th:last-child,
+.admin-table td:last-child {
+  text-align: right;
+  width: 92px;
+}
+
+.admin-user-note {
+  margin: 0 0 10px;
+  color: var(--text-soft);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.admin-user-controls {
+  margin-bottom: 10px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.admin-user-input {
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid #4f525b;
+  background: #111215;
+  color: var(--text-main);
+  padding: 0 10px;
+  font-size: 13px;
+  min-width: 0;
+}
+
+.admin-user-input:focus {
+  outline: none;
+  border-color: #6a6e78;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08);
+}
+
+.admin-user-add-btn,
+.admin-user-remove-btn {
+  height: 30px;
+  border-radius: 9px;
+  border: 1px solid #4f525b;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-main);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 0 10px;
+  cursor: pointer;
+}
+
+.admin-user-add-btn:hover,
+.admin-user-remove-btn:hover {
+  border-color: #6b6f79;
+}
+
+.admin-user-action-muted {
+  color: var(--text-subtle);
+  font-size: 12px;
 }
 
 .admin-status-chip {
@@ -2309,6 +2388,14 @@ body {
 
   .admin-table {
     min-width: 340px;
+  }
+
+  .admin-user-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-user-add-btn {
+    width: 100%;
   }
 
   .upload-controls {

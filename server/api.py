@@ -1,7 +1,8 @@
 import threading
 import time
+from datetime import datetime
 import torch
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Any, Optional
@@ -17,7 +18,7 @@ from utils import (
 from privacy_security import (
     AggregatorFactory, AggregationMethod, AggregationConfig,
     OutlierDetector, OutlierDetectionMethod,
-    get_reputation_manager, calculate_quality_score,
+    get_reputation_manager, calculate_quality_score, ClientReputation,
     get_security_monitor, create_malicious_update_event, create_outlier_event,
     create_update_validator, ValidationError, get_privacy_tracker
 )
@@ -118,6 +119,109 @@ class UpdateRequest(BaseModel):
     timestamp: Optional[int] = None  # For replay protection (future)
 
 
+class AdminUserRequest(BaseModel):
+    client_id: str
+
+
+SIMULATION_CLIENT_PREFIXES = (
+    "honest_",
+    "gradient_scaling_",
+    "sign_flipping_",
+    "gradient_noise_",
+    "free_rider_",
+    "dropout_prone_",
+    "coordinated_malicious_",
+)
+
+
+def _is_simulation_client_id(client_id: str) -> bool:
+    return any(client_id.startswith(prefix) for prefix in SIMULATION_CLIENT_PREFIXES)
+
+
+def _register_reputation_client(client_id: str) -> tuple[str, Optional[dict[str, Any]]]:
+    """Create a reputation client if it does not already exist."""
+    if not reputation_manager:
+        return "reputation_disabled", None
+
+    normalized = client_id.strip()
+    if not normalized:
+        raise ValueError("client_id cannot be empty")
+
+    state = getattr(reputation_manager, "_state", None)
+    lock = getattr(reputation_manager, "_lock", None)
+    if state is None or not hasattr(state, "clients"):
+        return "unavailable", None
+
+    def _create_or_get() -> tuple[bool, dict[str, Any]]:
+        tracked_clients = state.clients
+        reputation = tracked_clients.get(normalized)
+        created = False
+
+        if reputation is None:
+            now = datetime.now().isoformat()
+            reputation = ClientReputation(
+                client_id=normalized,
+                score=float(getattr(reputation_manager, "initial_reputation", 0.8)),
+                total_updates=0,
+                last_update_time=now,
+                created_time=now,
+                score_history=[],
+            )
+            tracked_clients[normalized] = reputation
+            created = True
+
+        if hasattr(reputation_manager, "_save_state"):
+            reputation_manager._save_state()
+
+        return created, {
+            "client_id": normalized,
+            "current_score": float(getattr(reputation, "score", 0.0)),
+            "total_updates": int(getattr(reputation, "total_updates", 0)),
+            "last_update": getattr(reputation, "last_update_time", None),
+            "created_time": getattr(reputation, "created_time", None),
+            "is_simulated": _is_simulation_client_id(normalized),
+        }
+
+    if lock:
+        with lock:
+            created, payload = _create_or_get()
+    else:
+        created, payload = _create_or_get()
+
+    return ("created" if created else "exists"), payload
+
+
+def _remove_reputation_client(client_id: str) -> bool:
+    """Remove client from reputation state."""
+    if not reputation_manager:
+        return False
+
+    normalized = client_id.strip()
+    if not normalized:
+        return False
+
+    state = getattr(reputation_manager, "_state", None)
+    lock = getattr(reputation_manager, "_lock", None)
+    if state is None or not hasattr(state, "clients"):
+        return False
+
+    def _remove() -> bool:
+        tracked_clients = state.clients
+        if normalized not in tracked_clients:
+            return False
+
+        del tracked_clients[normalized]
+        if hasattr(reputation_manager, "_save_state"):
+            reputation_manager._save_state()
+        return True
+
+    if lock:
+        with lock:
+            return _remove()
+
+    return _remove()
+
+
 def _get_reputation_clients(limit: int = 50) -> list[dict[str, Any]]:
     """Get sorted client reputation stats for dashboards."""
     if not reputation_manager:
@@ -140,6 +244,7 @@ def _get_reputation_clients(limit: int = 50) -> list[dict[str, Any]]:
                     "total_updates": total_updates,
                     "last_update": getattr(reputation, "last_update_time", None),
                     "created_time": getattr(reputation, "created_time", None),
+                    "is_simulated": _is_simulation_client_id(client_id),
                     "is_accepted": score >= threshold,
                     "aggregation_weight": score if score >= threshold else 0.0,
                 }
@@ -262,8 +367,6 @@ def get_simulation_metrics() -> dict[str, Any]:
     """Get real-time simulation metrics for monitoring."""
     metrics = _get_simulation_metrics_payload()
     if metrics is None:
-        from fastapi import HTTPException
-
         raise HTTPException(status_code=404, detail="Simulation mode not active")
     return metrics
 
@@ -276,6 +379,44 @@ def get_reputation_clients(limit: int = 50) -> dict[str, Any]:
     return {
         "count": len(clients),
         "clients": clients,
+    }
+
+
+@app.post("/admin/users")
+def admin_add_user(request: AdminUserRequest) -> dict[str, Any]:
+    """Register a reputation client for admin management."""
+    normalized = request.client_id.strip()
+    if not normalized:
+        raise HTTPException(status_code=400, detail="client_id cannot be empty")
+    if len(normalized) > 128:
+        raise HTTPException(status_code=400, detail="client_id too long")
+
+    status, payload = _register_reputation_client(normalized)
+    if status == "reputation_disabled":
+        raise HTTPException(status_code=503, detail="reputation manager disabled")
+    if status == "unavailable" or payload is None:
+        raise HTTPException(status_code=500, detail="unable to manage clients")
+
+    return {
+        "status": status,
+        "client": payload,
+    }
+
+
+@app.delete("/admin/users/{client_id}")
+def admin_remove_user(client_id: str) -> dict[str, Any]:
+    """Remove a reputation client from admin-managed list."""
+    normalized = client_id.strip()
+    if not normalized:
+        raise HTTPException(status_code=400, detail="client_id cannot be empty")
+
+    if not reputation_manager:
+        raise HTTPException(status_code=503, detail="reputation manager disabled")
+
+    was_removed = _remove_reputation_client(normalized)
+    return {
+        "status": "removed" if was_removed else "not_found",
+        "client_id": normalized,
     }
 
 

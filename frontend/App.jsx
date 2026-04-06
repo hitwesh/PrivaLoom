@@ -9,11 +9,13 @@ import AccessPortal from "./components/AccessPortal";
 import ArchitecturePage from "./components/ArchitecturePage";
 import AdminPanel from "./components/AdminPanel";
 import {
+  createAdminUser,
   getApiBaseUrl,
   getClientId,
   getFrontendOverview,
   getHealth,
   normalizeError,
+  removeAdminUser,
   sendChatPrompt,
   sendModelUpdate,
 } from "./lib/api";
@@ -74,6 +76,7 @@ export default function App() {
   const [backendError, setBackendError] = useState("");
   const [isBootstrappingWorkspace, setIsBootstrappingWorkspace] = useState(false);
   const [isRefreshingOverview, setIsRefreshingOverview] = useState(false);
+  const [isManagingUsers, setIsManagingUsers] = useState(false);
   const [lastTelemetrySyncAt, setLastTelemetrySyncAt] = useState(null);
   const previousOverviewRef = useRef(null);
 
@@ -222,6 +225,48 @@ export default function App() {
     }
   };
 
+  const handleAdminAddUser = async (nextClientId) => {
+    const normalized = String(nextClientId || "").trim();
+    if (!normalized) {
+      throw new Error("User ID cannot be empty.");
+    }
+
+    setIsManagingUsers(true);
+
+    try {
+      const result = await createAdminUser(normalized);
+      await refreshOverview({ silent: true });
+      appendActivity(`Admin registered user ${normalized}.`, "Admin");
+      return result;
+    } catch (error) {
+      appendActivity(`Admin add-user failed: ${normalizeError(error)}`, "Error");
+      throw error;
+    } finally {
+      setIsManagingUsers(false);
+    }
+  };
+
+  const handleAdminRemoveUser = async (targetClientId) => {
+    const normalized = String(targetClientId || "").trim();
+    if (!normalized) {
+      throw new Error("User ID cannot be empty.");
+    }
+
+    setIsManagingUsers(true);
+
+    try {
+      const result = await removeAdminUser(normalized);
+      await refreshOverview({ silent: true });
+      appendActivity(`Admin removed user ${normalized}.`, "Admin");
+      return result;
+    } catch (error) {
+      appendActivity(`Admin remove-user failed: ${normalizeError(error)}`, "Error");
+      throw error;
+    } finally {
+      setIsManagingUsers(false);
+    }
+  };
+
   useEffect(() => {
     if (stage !== "workspace") {
       return undefined;
@@ -358,8 +403,11 @@ export default function App() {
                 overview={backendOverview}
                 backendError={backendError}
                 isRefreshing={isRefreshingOverview}
+                isManagingUsers={isManagingUsers}
                 lastTelemetrySyncAt={lastTelemetrySyncAt}
                 onRefresh={() => refreshOverview({ silent: false })}
+                onAddUser={handleAdminAddUser}
+                onRemoveUser={handleAdminRemoveUser}
                 onAdminActivity={handleAdminActivity}
               />
             )}

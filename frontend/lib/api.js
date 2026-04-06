@@ -86,6 +86,21 @@ export async function sendModelUpdate(weights) {
   });
 }
 
+export async function createAdminUser(clientId) {
+  return request("/admin/users", {
+    method: "POST",
+    body: JSON.stringify({
+      client_id: clientId,
+    }),
+  });
+}
+
+export async function removeAdminUser(clientId) {
+  return request(`/admin/users/${encodeURIComponent(clientId)}`, {
+    method: "DELETE",
+  });
+}
+
 export async function getSimulationMetrics() {
   return request("/simulation/metrics");
 }

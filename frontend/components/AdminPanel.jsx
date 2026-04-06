@@ -68,6 +68,30 @@ const formatScenarioLabel = (scenario) =>
     .toLowerCase()
     .replace(/[_-]+/g, " ");
 
+const formatLastSync = (value) => {
+  if (!value || value === "-") {
+    return "-";
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return shortenLabel(value, 18);
+  }
+
+  return parsed.toLocaleString([], {
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+};
+
+const isSimulationUserId = (clientId) =>
+  /^(honest_|gradient_scaling_|sign_flipping_|gradient_noise_|free_rider_|dropout_prone_|coordinated_malicious_)/.test(
+    String(clientId || "")
+  );
+
 export default function AdminPanel({
   accountName,
   clientWorkspace,
@@ -76,12 +100,16 @@ export default function AdminPanel({
   overview,
   backendError,
   isRefreshing,
+  isManagingUsers,
   lastTelemetrySyncAt,
   onRefresh,
+  onAddUser,
+  onRemoveUser,
   onAdminActivity,
 }) {
   const [lastIntegrityRun, setLastIntegrityRun] = useState("Not yet run");
   const [lastRefreshRun, setLastRefreshRun] = useState("Not triggered");
+  const [newUserId, setNewUserId] = useState("");
   const [autoEnabled, setAutoEnabled] = useState(true);
   const [triggerMode, setTriggerMode] = useState("time");
   const [intervalHours, setIntervalHours] = useState(12);
@@ -120,40 +148,62 @@ export default function AdminPanel({
     [updates]
   );
 
+  const liveUsers = useMemo(
+    () =>
+      Array.isArray(overview?.reputation_clients)
+        ? overview.reputation_clients.map((client) => ({
+            name: client.client_id || "unknown-client",
+            backendClientId: client.client_id || null,
+            updateCount: client.total_updates || 0,
+            lastSyncRaw: client.last_update || "-",
+            lastSync: formatLastSync(client.last_update),
+            status: normalizeStatus(client.current_score || 0),
+            isSimulated: Boolean(client.is_simulated ?? isSimulationUserId(client.client_id)),
+          }))
+        : [],
+    [overview?.reputation_clients]
+  );
+
+  const hiddenSimulationCount = useMemo(
+    () => liveUsers.filter((entry) => entry.isSimulated).length,
+    [liveUsers]
+  );
+
+  const visibleTrackedClientCount = useMemo(
+    () => liveUsers.filter((entry) => !entry.isSimulated).length,
+    [liveUsers]
+  );
+
   const userRows = useMemo(() => {
-    const liveUsers = Array.isArray(overview?.reputation_clients)
-      ? overview.reputation_clients.map((client) => ({
-          name: client.client_id || "unknown-client",
-          updateCount: client.total_updates || 0,
-          lastSync: client.last_update || "-",
-          status: normalizeStatus(client.current_score || 0),
-        }))
-      : [];
+    const visibleLiveUsers = liveUsers.filter((entry) => !entry.isSimulated);
 
     const backendCurrentClient = clientId
-      ? liveUsers.find((entry) => entry.name === clientId)
+      ? liveUsers.find((entry) => entry.backendClientId === clientId)
       : null;
 
     const currentUserName = accountName || "active.operator";
     const currentUserRow = {
       name: currentUserName,
+      backendClientId: backendCurrentClient?.backendClientId || null,
       updateCount: backendCurrentClient ? backendCurrentClient.updateCount : currentUserCount,
+      lastSyncRaw: backendCurrentClient?.lastSyncRaw || "-",
       lastSync: backendCurrentClient
         ? backendCurrentClient.lastSync
         : currentUserCount > 0
           ? "local activity"
           : "-",
       status: "Live",
+      isSimulated: false,
     };
 
     const merged = [
       currentUserRow,
-      ...liveUsers.filter(
-        (entry) => entry.name !== currentUserName && entry.name !== clientId
+      ...visibleLiveUsers.filter(
+        (entry) => entry.name !== currentUserName && entry.backendClientId !== clientId
       ),
     ];
     return merged.length ? merged : fallbackUsers;
-  }, [accountName, clientId, currentUserCount, overview?.reputation_clients]);
+  }, [accountName, clientId, currentUserCount, liveUsers]);
 
   const barData = useMemo(() => userRows.slice(0, 5), [userRows]);
   const maxBarValue = useMemo(
@@ -208,6 +258,52 @@ export default function AdminPanel({
     } catch {
       setPanelFeedback(`Telemetry refresh failed at ${stamp}.`);
       triggerActivity("Telemetry refresh failed.", "Error");
+    }
+  };
+
+  const handleAddUser = async () => {
+    const normalized = newUserId.trim();
+    if (!normalized) {
+      setPanelFeedback("Enter a user ID before adding.");
+      return;
+    }
+
+    try {
+      const result = await onAddUser?.(normalized);
+      const status = result?.status === "exists" ? "already exists" : "added";
+      setPanelFeedback(`User ${normalized} ${status}.`);
+      setNewUserId("");
+      triggerActivity(`User ${normalized} ${status} from admin controls.`, "UserMgmt");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to add user.";
+      setPanelFeedback(`Failed to add user: ${message}`);
+      triggerActivity(`Failed to add user ${normalized}.`, "Error");
+    }
+  };
+
+  const handleRemoveUser = async (entry) => {
+    const targetId = entry?.backendClientId;
+    if (!targetId) {
+      return;
+    }
+
+    const confirmed = window.confirm(`Remove user ${targetId} from tracked clients?`);
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const result = await onRemoveUser?.(targetId);
+      if (result?.status === "not_found") {
+        setPanelFeedback(`User ${targetId} was already removed.`);
+      } else {
+        setPanelFeedback(`User ${targetId} removed.`);
+      }
+      triggerActivity(`User ${targetId} removed from admin controls.`, "UserMgmt");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to remove user.";
+      setPanelFeedback(`Failed to remove user: ${message}`);
+      triggerActivity(`Failed to remove user ${targetId}.`, "Error");
     }
   };
 
@@ -266,6 +362,26 @@ export default function AdminPanel({
             <span>Reputation ledger</span>
           </div>
 
+          <p className="admin-user-note">
+            Simulation clients are hidden from this list.
+            {hiddenSimulationCount > 0 ? ` Hidden now: ${hiddenSimulationCount}.` : ""}
+          </p>
+
+          <div className="admin-user-controls">
+            <input
+              className="admin-user-input"
+              type="text"
+              value={newUserId}
+              onChange={(event) => setNewUserId(event.target.value)}
+              placeholder="new user id"
+              maxLength={128}
+              disabled={isManagingUsers}
+            />
+            <button type="button" className="admin-user-add-btn" onClick={handleAddUser} disabled={isManagingUsers}>
+              {isManagingUsers ? "Working..." : "Add user"}
+            </button>
+          </div>
+
           <div className="admin-table-wrap">
             <table className="admin-table">
               <thead>
@@ -274,6 +390,7 @@ export default function AdminPanel({
                   <th>Updates</th>
                   <th>Last sync</th>
                   <th>Status</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -281,11 +398,25 @@ export default function AdminPanel({
                   <tr key={entry.name}>
                     <td title={entry.name}>{shortenLabel(entry.name, 28)}</td>
                     <td>{entry.updateCount}</td>
-                    <td>{entry.lastSync}</td>
+                    <td title={entry.lastSyncRaw || entry.lastSync}>{entry.lastSync}</td>
                     <td>
                       <span className={`admin-status-chip ${entry.status.toLowerCase()}`}>
                         {entry.status}
                       </span>
+                    </td>
+                    <td>
+                      {entry.backendClientId ? (
+                        <button
+                          type="button"
+                          className="admin-user-remove-btn"
+                          onClick={() => handleRemoveUser(entry)}
+                          disabled={isManagingUsers}
+                        >
+                          Remove
+                        </button>
+                      ) : (
+                        <span className="admin-user-action-muted">-</span>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -461,7 +592,7 @@ export default function AdminPanel({
             </p>
             <p>
               <span>Tracked clients:</span>
-              <strong>{reputationStats.total_clients ?? 0}</strong>
+              <strong>{visibleTrackedClientCount}</strong>
             </p>
             <p>
               <span>Simulation mode:</span>
