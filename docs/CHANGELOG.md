@@ -6,9 +6,15 @@
 - Thoroughly explain about your features and changes committed.
 - Always add changes on the top of previous changes, do not break this.
 
+## Improved Sync Visibility and Upload Reliability
+
+- Timestamp: 2026-04-07, 02:02am
+- Author: Hitesh
+- Description: Fixed /send-update response serialization to stop false frontend network failures, surfaced exact upload error messages, and added explicit backend sync-age indicators with renamed telemetry refresh controls in admin/status views.
+
 ## Integrated Frontend with Backend APIs
 
-- Timestamp: 2026-04-07, 01:35AM
+- Timestamp: 2026-04-07, 01:35am
 - Author: Hitesh
 - Description: Wired frontend workspace panels to live backend endpoints (/chat, /send-update, /status, /simulation/metrics) through a centralized API client, added backend CORS and dashboard endpoints for reputation/security/simulation data, replaced mock admin/chat/status behavior with real telemetry, and added deterministic file-to-update payload generation for upload-driven update dispatch.
 

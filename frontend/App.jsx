@@ -74,6 +74,7 @@ export default function App() {
   const [backendError, setBackendError] = useState("");
   const [isBootstrappingWorkspace, setIsBootstrappingWorkspace] = useState(false);
   const [isRefreshingOverview, setIsRefreshingOverview] = useState(false);
+  const [lastTelemetrySyncAt, setLastTelemetrySyncAt] = useState(null);
   const previousOverviewRef = useRef(null);
 
   const canOpenWorkspace = Boolean(session.accountName && session.clientWorkspace);
@@ -90,6 +91,7 @@ export default function App() {
       const overview = await getFrontendOverview();
       setBackendOverview(overview);
       previousOverviewRef.current = overview;
+      setLastTelemetrySyncAt(Date.now());
       setBackendError("");
 
       setSession({ accountName, clientWorkspace });
@@ -185,6 +187,7 @@ export default function App() {
 
       setBackendOverview(overview);
       previousOverviewRef.current = overview;
+      setLastTelemetrySyncAt(Date.now());
       setBackendError("");
 
       if (!silent) {
@@ -308,6 +311,7 @@ export default function App() {
               backendError={backendError}
               isRefreshing={isRefreshingOverview}
               clientId={getClientId()}
+              lastTelemetrySyncAt={lastTelemetrySyncAt}
             />
             <UpdateLog updates={activityLog} />
           </div>
@@ -354,6 +358,7 @@ export default function App() {
                 overview={backendOverview}
                 backendError={backendError}
                 isRefreshing={isRefreshingOverview}
+                lastTelemetrySyncAt={lastTelemetrySyncAt}
                 onRefresh={() => refreshOverview({ silent: false })}
                 onAdminActivity={handleAdminActivity}
               />

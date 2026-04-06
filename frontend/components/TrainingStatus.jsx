@@ -1,4 +1,27 @@
-export default function TrainingStatus({ overview, backendError, isRefreshing, clientId }) {
+const formatSyncAge = (lastTelemetrySyncAt) => {
+  if (!lastTelemetrySyncAt) {
+    return "not synced yet";
+  }
+
+  const ageSeconds = Math.max(0, Math.floor((Date.now() - lastTelemetrySyncAt) / 1000));
+  if (ageSeconds < 5) {
+    return "just now";
+  }
+  if (ageSeconds < 60) {
+    return `${ageSeconds}s ago`;
+  }
+
+  const ageMinutes = Math.floor(ageSeconds / 60);
+  return `${ageMinutes}m ago`;
+};
+
+export default function TrainingStatus({
+  overview,
+  backendError,
+  isRefreshing,
+  clientId,
+  lastTelemetrySyncAt,
+}) {
   const status = overview?.status;
   const serverOnline = Boolean(status?.server_status === "running" && !backendError);
   const currentBuffer = status?.current_buffer_size ?? 0;
@@ -47,6 +70,7 @@ export default function TrainingStatus({ overview, backendError, isRefreshing, c
 
       <p className="status-footnote">
         Client ID: {clientId?.slice(0, 8) || "-"}
+        {` | Last backend sync: ${formatSyncAge(lastTelemetrySyncAt)}`}
         {isRefreshing ? " | Syncing telemetry..." : ""}
       </p>
       {backendError ? <p className="upload-feedback error">{backendError}</p> : null}

@@ -38,6 +38,23 @@ const toPercent = (value) => {
 
 const normalizeStatus = (score, threshold = 0.85) => (score >= threshold ? "Healthy" : "Review");
 
+const formatSyncAge = (lastTelemetrySyncAt) => {
+  if (!lastTelemetrySyncAt) {
+    return "not synced yet";
+  }
+
+  const ageSeconds = Math.max(0, Math.floor((Date.now() - lastTelemetrySyncAt) / 1000));
+  if (ageSeconds < 5) {
+    return "just now";
+  }
+  if (ageSeconds < 60) {
+    return `${ageSeconds}s ago`;
+  }
+
+  const ageMinutes = Math.floor(ageSeconds / 60);
+  return `${ageMinutes}m ago`;
+};
+
 export default function AdminPanel({
   accountName,
   clientWorkspace,
@@ -46,11 +63,12 @@ export default function AdminPanel({
   overview,
   backendError,
   isRefreshing,
+  lastTelemetrySyncAt,
   onRefresh,
   onAdminActivity,
 }) {
   const [lastIntegrityRun, setLastIntegrityRun] = useState("Not yet run");
-  const [lastRetrainRun, setLastRetrainRun] = useState("Not triggered");
+  const [lastRefreshRun, setLastRefreshRun] = useState("Not triggered");
   const [autoEnabled, setAutoEnabled] = useState(true);
   const [triggerMode, setTriggerMode] = useState("time");
   const [intervalHours, setIntervalHours] = useState(12);
@@ -166,17 +184,17 @@ export default function AdminPanel({
     }
   };
 
-  const handleManualRetrain = async () => {
+  const handleTelemetryRefresh = async () => {
     const stamp = formatNow();
-    setLastRetrainRun(stamp);
+    setLastRefreshRun(stamp);
 
     try {
       await onRefresh?.();
-      setPanelFeedback(`Manual retrain sync triggered at ${stamp}.`);
-      triggerActivity("Manual retraining sync requested by admin panel.", "Retrain");
+      setPanelFeedback(`Telemetry refresh completed at ${stamp}.`);
+      triggerActivity("Telemetry refresh requested by admin panel.", "Sync");
     } catch {
-      setPanelFeedback(`Manual retrain sync failed at ${stamp}.`);
-      triggerActivity("Manual retraining sync failed.", "Error");
+      setPanelFeedback(`Telemetry refresh failed at ${stamp}.`);
+      triggerActivity("Telemetry refresh failed.", "Error");
     }
   };
 
@@ -374,8 +392,8 @@ export default function AdminPanel({
             <button type="button" onClick={handleIntegrityCheck} disabled={isRefreshing}>
               {isRefreshing ? "Refreshing..." : "Check integrity"}
             </button>
-            <button type="button" onClick={handleManualRetrain} disabled={isRefreshing}>
-              Sync now
+            <button type="button" onClick={handleTelemetryRefresh} disabled={isRefreshing}>
+              Refresh telemetry
             </button>
           </div>
 
@@ -387,8 +405,12 @@ export default function AdminPanel({
               </strong>
             </p>
             <p>
-              <span>Last manual retrain:</span>
-              <strong>{lastRetrainRun}</strong>
+              <span>Last backend sync:</span>
+              <strong>{formatSyncAge(lastTelemetrySyncAt)}</strong>
+            </p>
+            <p>
+              <span>Last refresh request:</span>
+              <strong>{lastRefreshRun}</strong>
             </p>
             <p>
               <span>Current operator:</span>
