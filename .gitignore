@@ -54,6 +54,11 @@ __pycache__/
 .venv/
 venv/
 
+#Claude
+.claude/
+specs/
+plans/
+
 # Hugging Face local model artifacts
 model/*
 !model/*.py
