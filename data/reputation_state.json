@@ -7,6 +7,14 @@
       "last_update_time": "2026-04-07T03:37:22.458867",
       "created_time": "2026-04-07T03:37:22.458867",
       "score_history": []
+    },
+    "abcd@gmail.com": {
+      "client_id": "abcd@gmail.com",
+      "score": 0.8,
+      "total_updates": 0,
+      "last_update_time": "2026-04-07T13:40:14.567866",
+      "created_time": "2026-04-07T13:40:14.567866",
+      "score_history": []
     }
   },
   "system_created_time": "2026-04-07T03:34:53.003132",
