@@ -57,9 +57,9 @@ psutil==6.1.1       # System monitoring for performance metrics
 PyYAML==6.0.3       # Already included but needed for scenarios
 
 # Future phases (commented for now)
-# scipy==1.15.0
-# scikit-learn==1.6.1
-# cryptography==44.0.0
-# PyJWT==2.11.0
-# python-jose==4.1.0
-# prometheus-client==0.22.0
+scipy==1.15.0
+scikit-learn==1.6.1
+cryptography==44.0.0
+PyJWT==2.11.0
+python-jose==4.1.0
+prometheus-client==0.22.0
