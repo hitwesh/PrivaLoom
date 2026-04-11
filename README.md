@@ -351,9 +351,9 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Acknowledgments
 
-- hitesh - backend architecture, frontend revamp, testing, backend bug fixing, and AI logic.
-- samik - backend architecture, testing, bug fixing, AI logic and client side and server side security measures, and mentoring.
-- tiyasasaha04 - backend architecture (multi client simulation), backend testing and bug fixing
-- riyaghosh2269 - frontend architecture
-- sugscript9 - project report
+- hitwesh (Hitesh) - backend architecture, frontend revamp, testing, backend bug fixing, and AI logic.
+- CornicleWasTaken (Samik) - backend architecture, testing, bug fixing, AI logic and client side and server side security measures, and mentoring.
+- tiyasasaha04 (Tiyasa) - backend architecture (multi client simulation), backend testing and bug fixing
+- riyaghosh2269 (Riya) - frontend architecture
+- sugscript9 (Riddhi) - project report
 - and YOU, dear watcher 💖
