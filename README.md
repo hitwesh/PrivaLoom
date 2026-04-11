@@ -347,5 +347,13 @@ Suggested contribution workflow:
 
 ## License
 
-No license file is currently present in the repository.
-Add a license before external distribution.
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+- hitesh - backend architecture, frontend revamp, testing, backend bug fixing, and AI logic.
+- samik - backend architecture, testing, bug fixing, AI logic and client side and server side security measures, and mentoring.
+- tiyasasaha04 - backend architecture (multi client simulation), backend testing and bug fixing
+- riyaghosh2269 - frontend architecture
+- sugscript9 - project report
+- and YOU, dear watcher 💖
